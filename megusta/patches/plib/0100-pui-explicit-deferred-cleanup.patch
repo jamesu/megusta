@@ -1,0 +1,21 @@
+--- a/src/pui/pu.h
++++ b/src/pui/pu.h
+@@ -381,6 +381,7 @@
+ void  puResetCursorIdle ( void ) ; // Next significant motion retains idle epoch.
+ void  puDrawCursor ( int x,int y ) ; // MG-PLIB-046: recovered draw entry.
+ void  puCursor ( int x,int y ) ;
++void puCleanUpJunk(); // Application script transitions drain deferred deletion.
+ void  puDisplay        ( void ) ;
+ void  puDisplay        ( int minimum_priority, int maximum_priority ) ; // MG-PLIB-030
+ int   puMouse          ( int button, int updown, int x, int y ) ;
+--- a/src/pui/pu.cxx
++++ b/src/pui/pu.cxx
+@@ -276,7 +276,7 @@
+ }
+ 
+ 
+-static void puCleanUpJunk ()
++void puCleanUpJunk ()
+ {
+   /* Step through the linked list of objects to delete, removing them. */
+   while ( objects_to_delete != NULL )

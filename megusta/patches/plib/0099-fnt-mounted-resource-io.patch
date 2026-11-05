@@ -1,0 +1,152 @@
+--- a/src/fnt/fnt.h
++++ b/src/fnt/fnt.h
+@@ -63,6 +63,9 @@
+ } ;
+ 
+ 
++// Application file adapter: mounted game resources or the default stdio path.
++void fntSetFileCallbacks(void* (*)(const char*,const char*),
++    size_t (*)(void*,size_t,size_t,void*),int (*)(void*));
+ class fntTexFont : public fntFont
+ {
+ private:
+--- a/src/fnt/fntLocal.h
++++ b/src/fnt/fntLocal.h
+@@ -26,7 +26,8 @@
+ 
+ 
+ extern int   isSwapped     ;
+-extern FILE *curr_image_fd ;
++extern void *curr_image_fd ;
++size_t fntFileRead(void*,size_t,size_t,void*);
+ 
+ 
+ inline void _fnt_swab_short ( unsigned short *x )
+@@ -66,14 +67,14 @@
+ inline unsigned char _fnt_readByte ()
+ {
+   unsigned char x ;
+-  fread ( & x, sizeof(unsigned char), 1, curr_image_fd ) ;
++  fntFileRead ( & x, sizeof(unsigned char), 1, curr_image_fd ) ;
+   return x ;
+ }
+ 
+ inline unsigned short _fnt_readShort ()
+ {
+   unsigned short x ;
+-  fread ( & x, sizeof(unsigned short), 1, curr_image_fd ) ;
++  fntFileRead ( & x, sizeof(unsigned short), 1, curr_image_fd ) ;
+   _fnt_swab_short ( & x ) ;
+   return x ;
+ }
+@@ -81,7 +82,7 @@
+ inline unsigned int _fnt_readInt ()
+ {
+   unsigned int x ;
+-  fread ( & x, sizeof(unsigned int), 1, curr_image_fd ) ;
++  fntFileRead ( & x, sizeof(unsigned int), 1, curr_image_fd ) ;
+   _fnt_swab_int ( & x ) ;
+   return x ;
+ }
+--- a/src/fnt/fntTXF.cxx
++++ b/src/fnt/fntTXF.cxx
+@@ -34,16 +34,28 @@
+ 
+ // MG-PLIB-056: executable delegates filtered mipmaps to glpng and has no
+ // GL-context validation gate. The returned texture image remains caller-owned.
+-FILE *curr_image_fd ;
++void *curr_image_fd ;
++namespace {
++void* stdioOpen(const char* path,const char* mode) { return fopen(path,mode); }
++size_t stdioRead(void* out,size_t size,size_t count,void* file) { return fread(out,size,count,static_cast<FILE*>(file)); }
++int stdioClose(void* file) { return fclose(static_cast<FILE*>(file)); }
++void* (*fontOpen)(const char*,const char*)=stdioOpen;
++size_t (*fontRead)(void*,size_t,size_t,void*)=stdioRead;
++int (*fontClose)(void*)=stdioClose;
++}
++void fntSetFileCallbacks(void* (*open)(const char*,const char*),size_t (*read)(void*,size_t,size_t,void*),int (*close)(void*)) {
++  fontOpen=open?open:stdioOpen; fontRead=read?read:stdioRead; fontClose=close?close:stdioClose;
++}
++size_t fntFileRead(void* output,size_t size,size_t count,void* file) { return fontRead(output,size,count,file); }
+ int isSwapped = FALSE ;
+ extern "C" void megusta_glpng_buildMipmaps(GLint,GLint,GLint,GLenum,const unsigned char*,int);
+ extern "C" unsigned char megusta_glpng_gammaByte(unsigned char);
+ 
+ int fntTexFont::loadTXF ( const char *fname, GLenum mag, GLenum min )
+ {
+-  FILE *fd ;
+-
+-  if ( (fd = fopen ( fname, "rb" )) == NULL )
++  void *fd ;
++
++  if ( (fd = fontOpen ( fname, "rb" )) == NULL )
+   {
+     ulSetError ( UL_WARNING,
+       "fntLoadTXF: Failed to open '%s' for reading.", fname ) ;
+@@ -54,11 +66,11 @@
+ 
+   unsigned char magic [ 4 ] ;
+ 
+-  if ( (int)fread ( &magic, sizeof (unsigned int), 1, fd ) != 1 )
++  if ( (int)fntFileRead ( &magic, sizeof (unsigned int), 1, fd ) != 1 )
+   {
+     ulSetError ( UL_WARNING,
+       "fntLoadTXF: '%s' an empty file!", fname ) ;
+-    fclose(fd); return FNT_FALSE ;
++    fontClose(fd); return FNT_FALSE ;
+   }
+ 
+   if ( magic [ 0 ] != 0xFF || magic [ 1 ] != 't' ||
+@@ -66,7 +78,7 @@
+   {
+     ulSetError ( UL_WARNING,
+       "fntLoadTXF: '%s' is not a 'txf' font file.", fname ) ;
+-    fclose(fd); return FNT_FALSE ;
++    fontClose(fd); return FNT_FALSE ;
+   }
+ 
+   isSwapped  = FALSE ;
+@@ -138,11 +150,11 @@
+       {
+         unsigned char *orig = new unsigned char [ ntexels ] ;
+ 
+-        if ( (int)fread ( orig, 1, ntexels, fd ) != ntexels )
++        if ( (int)fntFileRead ( orig, 1, ntexels, fd ) != ntexels )
+         {
+           ulSetError ( UL_WARNING,
+             "fntLoadTXF: Premature EOF in '%s'.", fname ) ;
+-          delete [] orig; fclose(fd); return FNT_FALSE ;
++          delete [] orig; fontClose(fd); return FNT_FALSE ;
+         }
+ 
+         teximage = new unsigned char [ 2 * ntexels ] ;
+@@ -163,12 +175,12 @@
+ 
+         texbitmap = new unsigned char [ stride * h ] ;
+ 
+-        if ( (int)fread ( texbitmap, 1, stride * h, fd ) != stride * h )
++        if ( (int)fntFileRead ( texbitmap, 1, stride * h, fd ) != stride * h )
+         {
+           delete [] texbitmap ;
+           ulSetError ( UL_WARNING,
+             "fntLoadTXF: Premature EOF in '%s'.", fname ) ;
+-          fclose(fd); return FNT_FALSE ;
++          fontClose(fd); return FNT_FALSE ;
+       	}
+ 
+         teximage = new unsigned char [ 2 * ntexels ] ;
+@@ -191,10 +203,10 @@
+     default:
+       ulSetError ( UL_WARNING,
+         "fntLoadTXF: Unrecognised format type in '%s'.", fname ) ;
+-      fclose(fd); return FNT_FALSE ;
+-  }
+-
+-  fclose ( fd ) ;
++      fontClose(fd); return FNT_FALSE ;
++  }
++
++  fontClose ( fd ) ;
+ 
+   fixed_pitch = FALSE ;
+ 
