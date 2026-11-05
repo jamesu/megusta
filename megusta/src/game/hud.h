@@ -9,9 +9,11 @@ class Camera;
 class BallsManager;
 struct HoleFrameClock;
 enum class PutterHudTextureSlot : int {
-    powerNeedle = 1,
-    leftBarAndSimpleNeedle = 2,
-    rightBar = 3
+    powerNeedle = 3,
+    simpleNeedle = 4,
+    leftBar = 5,
+    rightBar = 6,
+    highPowerBar = 7
 };
 struct PlayerOverlayServices {
     fntRenderer& renderer;

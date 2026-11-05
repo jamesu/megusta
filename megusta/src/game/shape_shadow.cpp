@@ -1,6 +1,6 @@
 #include "ground_shadow.h"
 #include "scene_grid.h"
-#include "engine/math.h"
+#include "engine/engine_math.h"
 #include "engine/opengl_adapter.h"
 #include "dts/shape_instance.h"
 #include "dts/bitmap_support.h"

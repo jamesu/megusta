@@ -2,11 +2,11 @@
 #include <cstddef>
 #include <ctime>
 
-#if defined(_MSC_VER)
-#define MEGUSTA_RUNTIME_THISCALL __thiscall
-#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#if (defined(__i386__) || defined(_M_IX86)) && (defined(__GNUC__) || defined(__clang__))
 #define MEGUSTA_RUNTIME_THISCALL __attribute__((thiscall))
 #else
+// MSVC cannot express thiscall on free functions. These runtime adapters are
+// called by rebuilt C++ callers, so use their shared native convention there.
 #define MEGUSTA_RUNTIME_THISCALL
 #endif
 

@@ -35,7 +35,9 @@ add_library(plib_ul STATIC
   "${PLIB_ROOT}/src/util/ul.cxx"
   "${PLIB_ROOT}/src/util/ulError.cxx")
 target_include_directories(plib_ul PUBLIC "${PLIB_ROOT}/src/util")
-add_library(plib_sg STATIC "${PLIB_ROOT}/src/sg/sg.cxx")
+add_library(plib_sg STATIC
+  "${PLIB_ROOT}/src/sg/sg.cxx"
+  "${PLIB_ROOT}/src/sg/sgd.cxx")
 target_include_directories(plib_sg PUBLIC "${PLIB_ROOT}/src/sg")
 target_link_libraries(plib_sg PUBLIC plib_ul)
 foreach(lib plib_ul plib_sg)
@@ -92,7 +94,7 @@ if(MEGUSTA_BUILD_SSG OR MEGUSTA_BUILD_PUI)
   add_library(glpng STATIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glpng/src/glpng.c")
   target_include_directories(glpng PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glpng/include")
   target_link_libraries(glpng PUBLIC megusta_png opengl32 glu32)
-  if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+  if(NOT MSVC AND CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(glpng PRIVATE
       -O2 -mfpmath=387 -mno-sse -mno-sse2
       -fno-fast-math -ffp-contract=off -fno-strict-aliasing)

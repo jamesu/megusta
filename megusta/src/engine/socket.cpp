@@ -2,14 +2,17 @@
 #define FD_SETSIZE 256
 #endif
 #include "socket.h"
+#ifdef _WIN32
+// resource_runtime.h reaches directory_services.h and then windows.h. Include
+// Winsock 2 first so windows.h does not declare the older winsock.h API.
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 #include "resource_runtime.h"
 #include <cerrno>
 #include <cstring>
 #include <cstdlib>
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
+#ifndef _WIN32
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>

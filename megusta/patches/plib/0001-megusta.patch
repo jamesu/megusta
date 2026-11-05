@@ -516,6 +516,17 @@
  };
  
  #endif // NET_CHANNEL_H
+--- a/src/net/netChat.cxx
++++ b/src/net/netChat.cxx
+@@ -63,7 +63,7 @@
+   if (needle && *needle)
+   {
+     const char* data = haystack.getData();
+-    char* ptr = strstr(data,needle);
++    const char* ptr = strstr(data,needle); // MG-PLIB-092: const-correct CRT overload.
+     if (ptr != NULL)
+       return(ptr-data);
+   }
 --- a/src/net/netList.h
 +++ b/src/net/netList.h
 @@ -132,6 +132,16 @@
@@ -6350,7 +6361,7 @@
    
    char* token;
    int startLevel = parser.level;
-@@ -1151,14 +1213,25 @@
+@@ -1151,14 +1213,27 @@
          strcpy ( obj->parent, name ) ;
        }
      }
@@ -6376,7 +6387,9 @@
 +        } else if(main_node && !strcmp(part,"*INHERIT_POS")) {
 +          for(int i=0;i<3;++i) { u32 value; parser.parseUInt(value,"inherit pos"); obj->inherit_pos[i]=value!=0; }
 +        } else if(!strcmp(part,"*TM_POS") && (main_node || target_node)) {
-+          sgVec3& dst=main_node ? obj->pos : obj->target;
++          // MG-PLIB-093: array members decay to pointers in a conditional
++          // expression, so keep the selected vector as its scalar buffer.
++          float* dst=main_node ? obj->pos : obj->target;
 +          for(int i=0;i<3;++i) parser.parseFloat(dst[i],"pos");
 +          if(main_node)sgCopyVec3(obj->target,obj->pos);
 +        }
@@ -6384,7 +6397,7 @@
      }
      else if (!strcmp(token,"*MESH"))
      {
-@@ -1194,6 +1267,7 @@
+@@ -1194,6 +1269,7 @@
    //else
    //  fprintf( stdout, "add_mesh: %s\n", obj->name ) ;
    
@@ -6392,7 +6405,7 @@
    ssgEntity* mesh_entity = NULL ;
    
    if ( obj->mesh_count > 1 )
-@@ -1218,7 +1292,7 @@
+@@ -1218,7 +1294,7 @@
        if ( mesh == NULL )
          continue ;
        
@@ -6401,7 +6414,7 @@
        if ( num_subs > 1 )
        {
          //break apart the mesh for each sub material
-@@ -1233,7 +1307,7 @@
+@@ -1233,7 +1309,7 @@
        }
        else
        {
@@ -6410,7 +6423,7 @@
          if ( leaf )
            selector -> addKid ( leaf ) ;
        }
-@@ -1242,12 +1316,12 @@
+@@ -1242,12 +1318,12 @@
      selector -> selectStep ( 0 ) ;
      mesh_entity = selector ;
    }
@@ -6425,7 +6438,7 @@
      if ( num_faces == 0 )
      {
        ssgLeaf* leaf = add_points( obj, mesh ) ;
-@@ -1256,7 +1330,7 @@
+@@ -1256,7 +1332,7 @@
      }
      else
      {
@@ -6434,7 +6447,7 @@
        if ( num_subs > 1 )
        {
          //break apart the mesh for each sub material
-@@ -1269,7 +1343,7 @@
+@@ -1269,7 +1345,7 @@
        }
        else
        {
@@ -6443,7 +6456,7 @@
          if ( leaf )
            branch -> addKid ( leaf ) ;
        }
-@@ -1301,8 +1375,17 @@
+@@ -1301,8 +1377,17 @@
        parent_branch = top_branch ;
      }
      
@@ -6461,7 +6474,7 @@
        ssgTransformArray* ta = new ssgTransformArray ( obj->num_tkeys ) ;
  
        /*
-@@ -1355,6 +1438,20 @@
+@@ -1355,6 +1440,20 @@
        tr = current_options -> createTransform ( tr, ta ) ;
        tr -> addKid ( mesh_entity ) ;
        mesh_entity = tr ;
@@ -6482,7 +6495,7 @@
      }
  
      parent_branch -> addKid ( mesh_entity ) ;
-@@ -1438,9 +1535,10 @@
+@@ -1438,9 +1537,10 @@
        if (! parse_material_list())
  				return FALSE;
      }
@@ -6496,7 +6509,7 @@
  				return FALSE;
      }
    }
-@@ -1453,8 +1551,8 @@
+@@ -1453,8 +1553,8 @@
    u32 i ;
    for ( i = 0 ; i < num_materials ; i++ )
    {
@@ -6507,7 +6520,7 @@
      delete materials[ i ] ;
    }
    delete[] materials ;
-@@ -1468,7 +1566,8 @@
+@@ -1468,7 +1568,8 @@
    current_options = ssgGetCurrentOptions () ;
  
    top_branch = new ssgBranch ;
@@ -6517,7 +6530,7 @@
    {
      delete top_branch ;
  		return 0;
-@@ -1478,8 +1577,13 @@
+@@ -1478,8 +1579,13 @@
      delete top_branch ;
      top_branch = 0 ;
    }
@@ -7839,7 +7852,17 @@
  // internal function. A token consisting of a single char has been found.
  // This is copied to a new buffer, so that I have the space to add the 0.
  void _ssgParser::addOneCharToken ( char *ptr ) 
-@@ -264,7 +259,7 @@
+@@ -246,7 +241,8 @@
+ 	onechartokenbuf_ptr += 2; // prepare for nect onechartoken
+ }
+ 
+-char *mystrchr( const char *string, int c )
++// MG-PLIB-093: only null-test this CRT result; retain its const qualifier.
++const char *mystrchr( const char *string, int c )
+ // like strchr, but string may be NULL
+ {
+ 	if (string == NULL )
+@@ -264,7 +260,7 @@
    tokbuf [ 0 ] = 0 ;
    numtok = 0 ;
    curtok = 0 ;
@@ -7848,7 +7871,7 @@
  	onechartokenbuf_ptr = onechartokenbuf ;
  	
    //get the next line with something on it
-@@ -273,9 +268,7 @@
+@@ -273,9 +269,7 @@
    {
  		linenum++ ;
  		if ( fgets ( linebuf, sizeof(linebuf), fileptr ) == NULL )
@@ -7859,7 +7882,7 @@
  		}
  		memcpy( tokbuf, linebuf, sizeof(linebuf) ) ;
  		ptr = tokbuf ;
-@@ -370,13 +363,13 @@
+@@ -370,13 +364,13 @@
  
  char* _ssgParser::parseToken( const char* name )
  // returns the next token from the current line.
@@ -7877,7 +7900,7 @@
  		if ( name )
  			error("missing %s",name) ;
  	}
-@@ -384,82 +377,35 @@
+@@ -384,82 +378,35 @@
  }
  
  

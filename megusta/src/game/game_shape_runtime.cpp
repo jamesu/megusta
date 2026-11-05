@@ -11,7 +11,7 @@
 #include "dts/scratch_release.h"
 #include "engine/resource_runtime.h"
 #include "engine/string_services.h"
-#include "engine/math.h"
+#include "engine/engine_math.h"
 #include <GL/gl.h>
 #include <cstdio>
 #include <cstdlib>

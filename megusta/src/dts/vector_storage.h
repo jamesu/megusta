@@ -3,8 +3,12 @@
 
 namespace megusta { namespace dts {
 
-#if defined(_MSC_VER)
-#define MEGUSTA_DTS_THISCALL __thiscall
+#if defined(_MSC_VER) && !defined(__clang__)
+// These C-linkage adapters take the object as an explicit first argument.
+// MSVC only accepts __thiscall on native member functions, so use its default
+// free-function convention here; declarations and definitions share it.
+// ClangCL accepts the GNU thiscall attribute and keeps the x86 register ABI.
+#define MEGUSTA_DTS_THISCALL
 #define MEGUSTA_DTS_CDECL __cdecl
 #define MEGUSTA_DTS_FASTCALL __fastcall
 #else

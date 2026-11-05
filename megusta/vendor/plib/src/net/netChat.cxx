@@ -63,7 +63,7 @@ find_terminator (const netBuffer& haystack, const char* needle)
   if (needle && *needle)
   {
     const char* data = haystack.getData();
-    char* ptr = strstr(data,needle);
+    const char* ptr = strstr(data,needle); // MG-PLIB-092: const-correct CRT overload.
     if (ptr != NULL)
       return(ptr-data);
   }

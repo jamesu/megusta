@@ -1,4 +1,4 @@
-#include "math.h"
+#include "engine_math.h"
 #include <cmath>
 
 namespace megusta { float binding_math_sqrtf(float value); }

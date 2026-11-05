@@ -91,6 +91,15 @@ extern int ftime();
 #include <sys/time.h>
 #endif
 
+#if defined(MS_WINDOWS) && defined(_MSC_VER)
+/* Modern UCRT exposes these legacy globals with underscored names.  Keep the
+   aliases local to this module and after system headers: defining them in the
+   global Python config rewrites members in UCRT's struct __timeb. */
+#define timezone _timezone
+#define daylight _daylight
+#define tzname _tzname
+#endif
+
 #ifdef __BEOS__
 /* For bigtime_t, snooze(). - [cjh] */
 #include <support/SupportDefs.h>

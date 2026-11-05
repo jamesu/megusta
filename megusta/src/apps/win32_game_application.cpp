@@ -12,6 +12,7 @@
 #include "game/native_game_helpers.h"
 #include "game/random.h"
 #include "game/shape_sequence_names.h"
+#include "dts/graphics_state.h"
 #include "game/effect.h"
 #include "game/hud.h"
 #include "game/spatial_editor.h"
@@ -116,10 +117,12 @@ struct Application {
     EffectRuntime effectState{effects,config,gl,gameInput.mouse.x,gameInput.mouse.y,
         driverViewport.displayHeight,camera.viewMatrix[0],0,0,0,0};
     SceneObjectAnimationServices animation{};
-    bool cameraFramingOffset=false;
+    std::unique_ptr<PutterAnimationServices> putterBindingAnimation;
+    std::unique_ptr<PutterStrikeServices> putterBindingStrike;
+    std::unique_ptr<bindings::WorldBindingServices> worldBindings;
     CameraFrameServices cameraFrame{cameraState,gamePlayers,gameBalls,putter,gameSpatialObjects,objects,sceneGrid,gl,
         gameInput,cameraServices,animation,gameHoleClock.totalFixedTickCount,driverViewport.displayWidth,
-        driverViewport.displayHeight,cameraCollisionFilter,gui.hasTabElements,cameraFramingOffset,false,
+        driverViewport.displayHeight,cameraCollisionFilter,gui.hasTabElements,false,
         platform::gameWarpCursor,[](const char* name,int loop){active->sounds.play(name,loop);}};
     std::uint32_t puttOverFrame=0,frameGate=0,lastAimFrame=0,aimInterval=0;
     std::unique_ptr<RoomClientRuntime> network;
@@ -133,8 +136,32 @@ struct Application {
     Application(int argc,char** argv):entry{resources,config,driverViewport,platform,startup,initialization,host,argc,argv} {
         active=this;
         platform::bindGamePlatform(&platform);
+        dts::bindDisplaySizeProvider([]() -> const int* {
+            static int dimensions[2];
+            dimensions[0]=driverViewport.displayWidth;
+            dimensions[1]=driverViewport.displayHeight;
+            return dimensions;
+        });
         bindings::bindDriverServices(&scripts,platform::gameEnableJoystick);
         bindings::bindCameraServices(&cameraBindings);
+        putterBindingAnimation.reset(new PutterAnimationServices{gamePlayers.currentPlayer,random,
+            nativeShapeAnimationServices(),this,gameHoleClock.totalFixedTickCount,false,gamePlayerVoiceNames,
+            [](void* p,const char* name,int delay){app(p).sounds.playVoice(name,static_cast<std::uint32_t>(delay));}});
+        putterBindingStrike.reset(new PutterStrikeServices{gamePlayers.playerStorage[0],gameBalls,gameplay.gameplay,this,
+            [](void* p){auto* c=app(p).client;return c&&c->shouldWaitForRemoteTurn();},
+            [](void* p,Point3F& vector){auto& a=app(p);vector={a.putter.aimTarget[0],a.putter.aimTarget[1],a.putter.aimTarget[2]};},
+            [](void* p,float power,const Point3F& vector){auto* c=app(p).client;if(c)c->sendPutt(power,vector);},
+            [](void* p){auto& a=app(p);auto* player=gamePlayers.currentPlayer;if(player)a.camera.enterPostShotFollow(a.cameraState,*player,*player->getBall(gameBalls));}});
+        worldBindings.reset(new bindings::WorldBindingServices{animation,cameraState,cameraServices,
+            *putterBindingAnimation,*putterBindingStrike,putterTuning,camera.headingDegrees,scripts,gameDriver,
+            gameHoleClock.totalFixedTickCount,cameraCollisionFilter,startup.demo,
+            [](const char* text){gameConsole.echo(text);},
+            [](){auto& a=*active;a.wire.applySceneCallbacks(a.objects,sceneGrid,
+                wireAllCallback,wireTriangleCallback,wireCandidatesCallback);},
+            platform::gameEnableJoystick,
+            [](Camera& value){auto& a=*active;value.dump(a.cameraFrame);},
+            [](Putter& value){value.dump();}});
+        bindings::bindWorldServices(worldBindings.get());
         playerServices.networkInGame=[](void* p){auto* c=app(p).client;return c && c->inGame();};
         playerServices.isEditing=editing;
         playerServices.timeMilliseconds=milliseconds;
@@ -357,17 +384,19 @@ struct Application {
         if(action==HoleAction::drawPowerHud){
             if(!gamePlayers.currentPlayer || !a.putter.hudAtlas)return;
             auto* atlas=static_cast<pix::MultiTextureList*>(a.putter.hudAtlas);
-            // The original flexible PIX record is [count, textureNames...].
-            // Ghidra's putterHudAtlas[n].textureCount refers to texture n-1;
-            // .textureNames[0] refers to texture n. See 0042f170.
+            // The original PIX record is [count, textureNames...]. The recovered
+            // x86 binds at offsets +0x10, +0x14, +0x18, +0x1c and +0x20 from
+            // this record select texture IDs 3 through 7. The decompiler's
+            // `putterHudAtlas[n].textureCount/textureNames[0]` notation is an
+            // artifact of treating this flexible record as an array of structs.
             const auto texture=[](pix::MultiTextureList* list,PutterHudTextureSlot slot) {
                 return pix::getMultiTexture(list,static_cast<int>(slot));
             };
             const PutterHudTextures textures{
-                texture(atlas,PutterHudTextureSlot::leftBarAndSimpleNeedle),
+                texture(atlas,PutterHudTextureSlot::leftBar),
                 texture(atlas,PutterHudTextureSlot::rightBar),
-                texture(atlas,PutterHudTextureSlot::rightBar),
-                texture(atlas,PutterHudTextureSlot::leftBarAndSimpleNeedle),
+                texture(atlas,PutterHudTextureSlot::highPowerBar),
+                texture(atlas,PutterHudTextureSlot::simpleNeedle),
                 texture(atlas,PutterHudTextureSlot::powerNeedle)};
             const bool ready=!a.client || a.client->isTurnStateReady();
             const bool waiting=a.client && a.client->shouldWaitForRemoteTurn();
@@ -444,7 +473,13 @@ struct Application {
                 auto& a=app(p);return pix::loadMultiTexture(a.resources.mounts(),path,external,mip,a.gl.tokens[wrap],a.gl.tokens[min],a.gl.tokens[mag]);};
             s.atlasTextureCount=[](void*,void* atlas){return static_cast<int>(static_cast<pix::MultiTextureList*>(atlas)->textureCount);};
             s.preloadSound=[](void* p,const char* name,int group){app(p).sounds.preload(name,group);};
-            s.createEffect=[](void*)->void*{return new Effect;};
+            // Putter_loadHoleResources_impl allocates this emitter through
+            // Effect_initializeUnregistered_impl, not Effect_ctor (which adds
+            // it to Effects::effects). At 0042f089 the original caller pushes
+            // 0x40400000 (3.0f) before calling that initializer. The putter
+            // owns and deletes this unregistered HUD effect before
+            // Effects_release_impl runs.
+            s.createEffect=[](void*)->void*{return new Effect(3.0f);};
             s.setEffectTexture=[](void*,void* effect,const char* path){static_cast<Effect*>(effect)->setTexture(path);};
             s.setEffectPosition=[](void*,void* effect,float x,float y,float z,float angle){static_cast<Effect*>(effect)->setPosition(x,y,z,angle);};
             s.setEffectScalar=[](void*,void* effect,PutterEffectScalar field,float value){auto& e=*static_cast<Effect*>(effect);switch(field){

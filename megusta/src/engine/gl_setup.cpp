@@ -1,11 +1,11 @@
 #include "gl_setup.h"
 #include "opengl_adapter.h"
-#include <GL/gl.h>
-#include <cstring>
-#include <stdexcept>
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <GL/gl.h>
+#include <cstring>
+#include <stdexcept>
 namespace megusta {
 namespace {
 void* resolve(const char* name,void* (*host)(const char*)) {

@@ -71,7 +71,6 @@ struct CameraFrameServices {
     int& screenHeight;
     int& typeFilter;
     bool& hasTabElements;
-    bool& framingOffsetEnabled;
     bool captureOption;
     void (*warpCursor)(int,int);
     void (*playSound)(const char*,int);

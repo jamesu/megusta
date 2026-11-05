@@ -1,9 +1,18 @@
 cmake_minimum_required(VERSION 3.20)
 project(megusta LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(WIN32)
+  add_compile_definitions(NOMINMAX)
+endif()
 include(cmake/AddressSanitizer.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(MEGUSTA_DTS_ENABLE_ABI_WRAPPERS
   "Link DTS address/ABI entry wrappers into megusta_scene_inspect" OFF)
+option(MEGUSTA_GAME_PRESERVE_LAUNCH_CWD
+  "Preserve the debugger/launcher working directory instead of changing to the executable directory" OFF)
+set(MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY "" CACHE PATH
+  "Optional Visual Studio debugger working directory for megusta_game")
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "Megusta requires a 32-bit target")
 endif()
@@ -47,7 +56,7 @@ target_include_directories(megusta_zlib PUBLIC "${Z}")
 add_library(megusta_png STATIC ${PSRC})
 target_include_directories(megusta_png PUBLIC "${P}")
 target_link_libraries(megusta_png PUBLIC megusta_zlib)
-if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+if(NOT MSVC AND CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
   # Period-appropriate optimized C build. The PNG path uses x87 arithmetic;
   # the zlib codec is integer-only and keeps conservative aliasing semantics.
   target_compile_options(megusta_zlib PRIVATE -O2 -fno-strict-aliasing)
@@ -69,7 +78,7 @@ if(WIN32)
   # for the runtime, prefix probe, and focused checks; double-evaluation alone
   # does not select x87 when the compiler targets i686.
   function(megusta_apply_vc6_x87_model target)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    if(NOT MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
       target_compile_options(${target} PRIVATE
         -O2 -mfpmath=387 -mno-sse -mno-sse2
         -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
@@ -190,10 +199,16 @@ if(MEGUSTA_BUILD_SSG)
     target_compile_definitions(megusta_original_plib_oracle PRIVATE MEGUSTA_ORACLE_NET)
   endif()
   set_target_properties(megusta_original_plib_oracle PROPERTIES PREFIX "")
-  target_link_options(megusta_original_plib_oracle PRIVATE "-Wl,--add-stdcall-alias")
+  if(NOT MSVC)
+    target_link_options(megusta_original_plib_oracle PRIVATE "-Wl,--add-stdcall-alias")
+  endif()
   add_executable(megusta_original_plib_check tests/original_host.cpp)
   target_compile_features(megusta_original_plib_check PRIVATE cxx_std_17)
-  target_link_options(megusta_original_plib_check PRIVATE "-Wl,--image-base,0x10000000")
+  if(MSVC)
+    target_link_options(megusta_original_plib_check PRIVATE /BASE:0x10000000)
+  else()
+    target_link_options(megusta_original_plib_check PRIVATE "-Wl,--image-base,0x10000000")
+  endif()
   add_executable(megusta_scene_inspect src/apps/scene_inspect.cpp)
   target_link_libraries(megusta_scene_inspect PRIVATE megusta_platform)
   if(WIN32)
@@ -331,8 +346,8 @@ if(MEGUSTA_BUILD_SSG)
 
   # Native game image. Reuse the same recovered implementation units and
   # library closure as the integration executable, but omit its CLI and test
-  # drivers. This currently links the recovered WinMain path, but is not yet a
-  # runnable game: no application composition root binds GameEntryServices.
+  # drivers. The Win32 application composition root binds entry, gameplay,
+  # world, rendering and platform services before startup runs.
   add_executable(megusta_game WIN32 src/apps/game_winmain.cpp)
   target_sources(megusta_game PRIVATE src/apps/win32_game_application.cpp)
   get_target_property(MEGUSTA_GAME_SOURCE_CANDIDATES megusta_scene_inspect SOURCES)
@@ -347,14 +362,24 @@ if(MEGUSTA_BUILD_SSG)
   target_sources(megusta_game PRIVATE src/game/application_input.cpp)
   if(WIN32)
     # Native startup callbacks belong to the Windows executable, not the
-    # scene-inspection harness. This supplies startup boundaries only; the
-    # application composition root must still bind GameEntryServices.
+    # scene-inspection harness.
     target_sources(megusta_game PRIVATE src/game/win32_startup_host.cpp)
   endif()
   get_target_property(MEGUSTA_GAME_LINKS megusta_scene_inspect LINK_LIBRARIES)
   target_link_libraries(megusta_game PRIVATE ${MEGUSTA_GAME_LINKS})
   target_include_directories(megusta_game PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   target_compile_definitions(megusta_game PRIVATE MEGUSTA_GAME_EXECUTABLE=1)
+  if(MEGUSTA_GAME_PRESERVE_LAUNCH_CWD)
+    target_compile_definitions(megusta_game PRIVATE MEGUSTA_GAME_PRESERVE_LAUNCH_CWD=1)
+  endif()
+  if(MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY)
+    if(NOT IS_DIRECTORY "${MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY}")
+      message(FATAL_ERROR
+        "MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY is not a directory: ${MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY}")
+    endif()
+    set_property(TARGET megusta_game PROPERTY VS_DEBUGGER_WORKING_DIRECTORY
+      "${MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY}")
+  endif()
   megusta_apply_vc6_x87_model(megusta_game)
 endif()
 if(WIN32)
@@ -362,10 +387,18 @@ if(WIN32)
   # emitted separately and discarded from final artifacts, with linker maps.
   get_property(MEGUSTA_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
   foreach(target IN LISTS MEGUSTA_TARGETS)
-    target_compile_options(${target} PRIVATE -ffunction-sections -fdata-sections)
+    if(MSVC)
+      target_compile_options(${target} PRIVATE /Gy /Gw)
+    else()
+      target_compile_options(${target} PRIVATE -ffunction-sections -fdata-sections)
+    endif()
     get_target_property(kind ${target} TYPE)
     if(kind STREQUAL "EXECUTABLE" OR kind STREQUAL "SHARED_LIBRARY")
-      target_link_options(${target} PRIVATE "LINKER:--gc-sections" "LINKER:-Map,${CMAKE_CURRENT_BINARY_DIR}/${target}.map")
+      if(MSVC)
+        target_link_options(${target} PRIVATE /OPT:REF "/MAP:${CMAKE_CURRENT_BINARY_DIR}/${target}.map")
+      else()
+        target_link_options(${target} PRIVATE "LINKER:--gc-sections" "LINKER:-Map,${CMAKE_CURRENT_BINARY_DIR}/${target}.map")
+      endif()
     endif()
   endforeach()
 endif()
@@ -376,14 +409,22 @@ if(WIN32 AND TARGET megusta_scene_inspect)
   target_sources(megusta_library_link_check PRIVATE
     src/engine/resource_file.cpp src/engine/log_capture.cpp
     src/engine/string_services.cpp)
-  target_link_options(megusta_library_link_check PRIVATE
-    "LINKER:--no-gc-sections" "LINKER:-Map,${CMAKE_CURRENT_BINARY_DIR}/megusta_library_link_check.map")
+  if(MSVC)
+    target_link_options(megusta_library_link_check PRIVATE /OPT:NOREF "/MAP:${CMAKE_CURRENT_BINARY_DIR}/megusta_library_link_check.map")
+  else()
+    target_link_options(megusta_library_link_check PRIVATE
+      "LINKER:--no-gc-sections" "LINKER:-Map,${CMAKE_CURRENT_BINARY_DIR}/megusta_library_link_check.map")
+  endif()
   foreach(component megusta_python plib_ul plib_sg plib_ssg plib_fnt plib_pui
       plib_net glpng megusta_png megusta_zlib megusta_pix megusta_audio megusta_openal_ds)
     if(TARGET ${component})
       target_link_libraries(megusta_library_link_check PRIVATE ${component})
-      target_link_options(megusta_library_link_check PRIVATE
-        "LINKER:--whole-archive,$<TARGET_FILE:${component}>,--no-whole-archive")
+      if(MSVC)
+        target_link_options(megusta_library_link_check PRIVATE "/WHOLEARCHIVE:$<TARGET_FILE:${component}>")
+      else()
+        target_link_options(megusta_library_link_check PRIVATE
+          "LINKER:--whole-archive,$<TARGET_FILE:${component}>,--no-whole-archive")
+      endif()
     endif()
   endforeach()
 endif()

@@ -1,7 +1,7 @@
 #include "spatial_object.h"
 #include "geometry_queries.h"
 #include "scene_grid.h"
-#include "engine/math.h"
+#include "engine/engine_math.h"
 #include "engine/opengl_adapter.h"
 #include "recovered_binding_primitives.h"
 #include <GL/gl.h>

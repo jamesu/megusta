@@ -1,7 +1,10 @@
 #pragma once
 #include "sequence.h"
-#if defined(_MSC_VER)
-#define MEGUSTA_THREAD_THISCALL __thiscall
+#if defined(_MSC_VER) && !defined(__clang__)
+// These C-linkage adapters take `self` explicitly. MSVC cannot mark a free
+// function __thiscall; keep the declaration/call convention consistent.
+// ClangCL accepts the GNU thiscall attribute and preserves the x86 ABI.
+#define MEGUSTA_THREAD_THISCALL
 #define MEGUSTA_THREAD_CDECL __cdecl
 #define MEGUSTA_THREAD_FASTCALL __fastcall
 #else

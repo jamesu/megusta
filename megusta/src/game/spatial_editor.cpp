@@ -6,7 +6,7 @@
 #include "scene_grid.h"
 #include "gui_runtime.h"
 #include "gameplay_messages.h"
-#include "engine/math.h"
+#include "engine/engine_math.h"
 #include "engine/string_services.h"
 #include <cmath>
 #include <cstdio>

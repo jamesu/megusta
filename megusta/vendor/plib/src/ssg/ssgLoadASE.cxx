@@ -1227,7 +1227,9 @@ static int parse_object(u32 kind)
         } else if(main_node && !strcmp(part,"*INHERIT_POS")) {
           for(int i=0;i<3;++i) { u32 value; parser.parseUInt(value,"inherit pos"); obj->inherit_pos[i]=value!=0; }
         } else if(!strcmp(part,"*TM_POS") && (main_node || target_node)) {
-          sgVec3& dst=main_node ? obj->pos : obj->target;
+          // MG-PLIB-093: array members decay to pointers in a conditional
+          // expression, so keep the selected vector as its scalar buffer.
+          float* dst=main_node ? obj->pos : obj->target;
           for(int i=0;i<3;++i) parser.parseFloat(dst[i],"pos");
           if(main_node)sgCopyVec3(obj->target,obj->pos);
         }

@@ -40,12 +40,12 @@ target_include_directories(megusta_python PUBLIC
   "${MEGUSTA_PYTHON_ROOT}/Objects"
   "${MEGUSTA_PYTHON_ROOT}/Modules")
 target_compile_definitions(megusta_python PRIVATE
-  WIN32 MS_WIN32 MS_WINDOWS USE_SOCKET NDEBUG)
+  NDEBUG USE_DL_EXPORT)
 set_target_properties(megusta_python PROPERTIES
   C_STANDARD 90
   C_STANDARD_REQUIRED OFF
   C_EXTENSIONS ON)
-if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+if(NOT MSVC AND CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
   # Upstream python15 Release uses /O2. The x86 MSVC 5/6 target uses x87;
   # preserve that arithmetic profile and the old compiler's aliasing behavior.
   target_compile_options(megusta_python PRIVATE
@@ -57,3 +57,10 @@ elseif(MSVC)
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
 target_link_libraries(megusta_python PUBLIC advapi32 winmm wsock32)
+if(MSVC)
+  # PC/config.h carries an automatic python15 DLL import-library directive.
+  # This target is a static embed, so ignore that default-library pragma even
+  # if a stale object or direct upstream config include still emits it.
+  target_link_options(megusta_python INTERFACE
+    "/NODEFAULTLIB:python15.lib" "/NODEFAULTLIB:python15_d.lib")
+endif()

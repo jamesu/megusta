@@ -1,7 +1,7 @@
 #include "putt_guide.h"
 #include <ssg.h>
 #include "ball_collision.h"
-#include "engine/math.h"
+#include "engine/engine_math.h"
 #include "recovered_binding_primitives.h"
 #include "vector_primitives.h"
 #include <cmath>

@@ -7,10 +7,37 @@
 #include <mmsystem.h>
 #include <dinput.h>
 #include <GL/gl.h>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <stdexcept>
 namespace megusta::platform {
+namespace {
+// DINPUT.DLL is loaded dynamically below, so this target deliberately has no
+// dinput.lib dependency. Recreate the SDK's standard DIJOYSTATE object map
+// locally; this is the same axis/slider/POV/button layout as c_dfDIJoystick.
+const DIDATAFORMAT* joystickDataFormat() {
+    static DIOBJECTDATAFORMAT objects[44]{};
+    static const DIDATAFORMAT format=[] {
+        unsigned i=0;
+        objects[i++]={&GUID_XAxis,offsetof(DIJOYSTATE,lX),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_YAxis,offsetof(DIJOYSTATE,lY),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_ZAxis,offsetof(DIJOYSTATE,lZ),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_RxAxis,offsetof(DIJOYSTATE,lRx),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_RyAxis,offsetof(DIJOYSTATE,lRy),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_RzAxis,offsetof(DIJOYSTATE,lRz),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        for (unsigned n=0;n<2;++n)
+            objects[i++]={&GUID_Slider,offsetof(DIJOYSTATE,rglSlider)+n*sizeof(LONG),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(n)),0};
+        for (unsigned n=0;n<4;++n)
+            objects[i++]={&GUID_POV,offsetof(DIJOYSTATE,rgdwPOV)+n*sizeof(DWORD),static_cast<DWORD>(DIDFT_POV|DIDFT_MAKEINSTANCE(n)),0};
+        for (unsigned n=0;n<32;++n)
+            objects[i++]={&GUID_Button,offsetof(DIJOYSTATE,rgbButtons)+n,static_cast<DWORD>(DIDFT_BUTTON|DIDFT_MAKEINSTANCE(n)),0};
+        return DIDATAFORMAT{sizeof(DIDATAFORMAT),sizeof(DIOBJECTDATAFORMAT),DIDF_ABSAXIS,
+            sizeof(DIJOYSTATE),i,objects};
+    }();
+    return &format;
+}
+}
 struct Win32Runtime::Native {
     Win32Runtime* owner;
     HWND window=nullptr; HDC dc=nullptr; HGLRC gl=nullptr;
@@ -293,7 +320,7 @@ bool Win32Runtime::initializeJoystick() {
     result=native->input->EnumDevices(DIDEVTYPE_JOYSTICK,Native::device,native,DIEDFL_ATTACHEDONLY);
     if (FAILED(result)) { reportFailure(0x59,"EnumDevices"); return false; }
     if (!native->joystick) { reportFailure(0x60,"Joystick not found"); return false; }
-    result=native->joystick->SetDataFormat(&c_dfDIJoystick);
+    result=native->joystick->SetDataFormat(joystickDataFormat());
     if (FAILED(result)) { reportFailure(0x68,"SetDataFormat"); return false; }
     result=native->joystick->SetCooperativeLevel(native->window,DISCL_NONEXCLUSIVE|DISCL_FOREGROUND);
     if (FAILED(result)) { reportFailure(0x70,"SetCooperativeLevel"); return false; }

@@ -3,6 +3,7 @@
 #include "runtime.h"
 #include "game/camera.h"
 #include "game/putter.h"
+#include "game/player.h"
 #include "game/driver.h"
 #include "game/native_game_helpers.h"
 #include <new>
@@ -76,10 +77,21 @@ SWIG_BEGIN(Putter,setTee,"ss",char* encodedObject,&encodedObject)
         PyErr_SetString(PyExc_TypeError,"Type error in argument 2 of Putter_setTee. Expected _Object_p."); return nullptr;
     }
     NEED_GAMEPLAY p->setTee(*value,gameBalls,gameplayServices()->rest); return none(); }
-SETINT(Putter,setAnim,NEED_WORLD p->setAnimation(value,services->putterAnimation))
+SETINT(Putter,setAnim,NEED_WORLD
+    auto& animation=services->putterAnimation;
+    animation.player=gamePlayers.currentPlayer; animation.tick=services->fixedTick; animation.editing=editing();
+    if (!animation.player) return missingWorldServices();
+    p->setAnimation(value,animation))
 FLOATING(Putter,getPower,p->power)
 SWIG_BEGIN(Putter,forcePutt,"sf",float value,&value)
-    NEED_WORLD p->forcePutt(value,services->putterAnimation,services->strike,services->tuning,services->cameraHeading); return none(); }
+    NEED_WORLD
+    if (!gamePlayers.currentPlayer) return missingWorldServices();
+    auto& animation=services->putterAnimation;
+    animation.player=gamePlayers.currentPlayer; animation.tick=services->fixedTick; animation.editing=editing();
+    const auto& bound=services->strike;
+    PutterStrikeServices strike{*gamePlayers.currentPlayer,gameBalls,gameplayServices()->ball,bound.context,
+        bound.waitForRemoteTurn,bound.remoteVector,bound.sendPutt,bound.enterCameraFollow};
+    p->forcePutt(value,animation,strike,services->tuning,services->cameraHeading); return none(); }
 SETINT(Putter,showPowerBar,p->powerBarVisible=value!=0)
 INTEGER(Putter,isAiming,p->state==1)
 INTEGER(Putter,isSwinging,p->state==2 || p->state==3)

@@ -7,7 +7,7 @@
 #include "scene_grid.h"
 #include "ground_shadow.h"
 #include "native_game_helpers.h"
-#include "engine/math.h"
+#include "engine/engine_math.h"
 #include "engine/opengl_adapter.h"
 #include "engine/resource_runtime.h"
 #include "engine/string_services.h"
@@ -103,7 +103,11 @@ void Camera::handleInput(CameraFrameServices& s) {
     clampEditorOrbit(isEditing);
 }
 void Camera::buildViewMatrices(CameraFrameServices& s) {
-    auto target=getFramingTarget(isEditing(),s.framingOffsetEnabled); auto eye=controlEye; sgVec3 up={0,0,1};
+    // 00437360 gates the framing offset with DAT_0052ce6c: targetBallWithOffset
+    // sets it, while targetCharacterHeight/targetBallPosition clear it. Use the
+    // recovered per-frame state instead of the old app-level boolean, which
+    // was permanently false and left the camera aimed too low at the ball.
+    auto target=getFramingTarget(isEditing(),s.runtime.ballTargetOffset!=0); auto eye=controlEye; sgVec3 up={0,0,1};
     if (s.fixedTick-s.runtime.jitterStartTick<static_cast<unsigned>(s.runtime.jitterDuration)) {
         const auto jitter=[](float scale){return static_cast<float>(static_cast<int>(std::rand()&15)-8)*scale;};
         up[0]+=jitter(0.0078125f); up[1]+=jitter(0.0078125f); up[2]+=jitter(0.0078125f);

@@ -50,9 +50,14 @@ void engineRuntimeWinMainBootstrap(void* instance) {
     if (HMODULE directDraw=LoadLibraryA("DDRAW.DLL")) FreeLibrary(directDraw);
 #endif
     services.nativeInstance=instance;
+#if !defined(MEGUSTA_GAME_PRESERVE_LAUNCH_CWD)
+    // Match the recovered bootstrap by default: it switches to the executable
+    // directory before opening relative game resources. Debugger launches can
+    // opt out so Visual Studio's configured working directory is respected.
     char path[260]; std::strcpy(path,engine_runtime::currentExecutablePath());
     char* separator=std::strrchr(path,'\\'); if (!separator) separator=std::strrchr(path,'/');
     if (separator) { *separator='\0'; std::error_code error; std::filesystem::current_path(path,error); }
+#endif
     if (redirectStandardStream("stdout.txt",stdout,1)) std::setvbuf(stdout,nullptr,_IOLBF,512);
     if (redirectStandardStream("stderr.txt",stderr,2)) std::setbuf(stderr,nullptr);
     gameRuntimeStartupBridge(services.argc,services.argv);
