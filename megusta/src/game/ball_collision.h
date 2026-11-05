@@ -38,8 +38,9 @@ struct BallPhysicsServices {
     BallCollisionWorkspace& collision;
     BallRestServices& rest;
     const float* acceleration;
-    // Recovered string addresses 004f3788, 00504368, 0050436c; exact bytes
-    // still need confirmation from an existing export before host wiring.
+    // Recovered strings at 004f3788, 00504368 and 0050436c are respectively
+    // "0", "321" and "123". Ball_resolveSceneImpact interprets each digit as
+    // a collision-recovery opcode and concatenates them in a 12-byte buffer.
     const char* overlapRecovery;
     const char* slowRecovery;
     const char* fastRecovery;

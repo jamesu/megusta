@@ -86,9 +86,15 @@ struct Application {
     ConsoleServices consoleServices{config,client,gl,driverViewport.displayWidth,driverViewport.displayHeight,
         consoleColumns,consoleRows,consoleScaled,platform::gameMilliseconds,platform::gameQuery};
     PlayerServices playerServices{this,fatal,nullptr,nullptr,nullptr,nullptr,nullptr,config,random};
-    float acceleration[3]={0,0,-0.01f};
+    // The original initializer thunk at 00457760 jumps to 00457770, which
+    // stores 0, 0, and -the float at 004eafb0 (0.426666677f). The data bytes
+    // start at zero; the initializer's runtime reachability is still unclear.
+    float acceleration[3]={0.0f,0.0f,-0.426666677f};
     GameplayHost gameplayHost{playerServices,this,prepareDraw,restoreHeading,strikeSound,ballSound,objectSound,
-        milliseconds,networkEnd,acceleration,"overlap recovery","slow recovery","fast recovery"};
+        // Ball_resolveSceneImpact_impl reads these as compact digit opcodes,
+        // not descriptive text. Values are the strings at 004f3788,
+        // 00504368 and 0050436c respectively.
+        milliseconds,networkEnd,acceleration,"0","321","123"};
     GameplayRuntime gameplay{gamePlayers,gameBalls,gameTasks,objects,sceneGrid,ballCollision,ballCollisionRandom,gameplayHost};
     PuttMap map;
     PuttMapResourceIO mapIO{resources.mounts()};
