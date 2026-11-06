@@ -3,8 +3,8 @@ namespace megusta {
 namespace {
 GameplayRuntime& runtime(void* p) { return *static_cast<GameplayRuntime*>(p); }
 Ball* currentBall(void* p) { return runtime(p).balls.currentBall; }
-std::uint32_t lastTouch(void* p,Ball* ball) {
-    return static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(ball->lastTouch(runtime(p).objects)));
+std::uintptr_t lastTouch(void* p,Ball* ball) {
+    return reinterpret_cast<std::uintptr_t>(ball->lastTouch(runtime(p).objects));
 }
 void prepareDraw(void* p) { auto& r=runtime(p); r.host.prepareDraw(r.host.context); }
 int strokeAndPenaltyCount(void* p,int index) {

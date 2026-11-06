@@ -722,8 +722,18 @@ array_buffer_info(self, args)
 	arrayobject *self;
 	PyObject *args;
 {
+#if SIZEOF_VOID_P > SIZEOF_LONG
+	PyObject *address = PyLong_FromVoidPtr((void *)self->ob_item);
+	PyObject *result;
+	if (address == NULL)
+		return NULL;
+	result = Py_BuildValue("Ol", address, (long)self->ob_size);
+	Py_DECREF(address);
+	return result;
+#else
 	return Py_BuildValue("ll",
 			     (long)(self->ob_item), (long)(self->ob_size));
+#endif
 }
 
 static char buffer_info_doc [] =

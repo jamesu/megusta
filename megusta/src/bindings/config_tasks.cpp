@@ -57,9 +57,8 @@ static PyObject* GameConfig_writeInt(PyObject*,PyObject* args) {
     RECEIVER(GameConfig,writeInt) p->writeInt(section,key,value); return none();
 }
 SIMPLE(Task,getBall,return pointerResult(p->contextObject,"_Ball_p"))
-// contextTag is the original pointer-sized object token, retained as uint32 on
-// the supported Win32 target. Its alternate last-touch usage remains tracked.
-SIMPLE(Task,getObject,return pointerResult(reinterpret_cast<void*>(static_cast<std::uintptr_t>(p->contextTag)),"_Object_p"))
+// contextTag carries the last-touch pointer token and must remain native-width.
+SIMPLE(Task,getObject,return pointerResult(reinterpret_cast<void*>(p->contextTag),"_Object_p"))
 SIMPLE(Task,isPaused,return Py_BuildValue(const_cast<char*>("i"),int((p->stateFlags&2u)==2u)))
 SIMPLE(Task,pause,p->stateFlags|=2u; return none())
 SIMPLE(Task,unPause,p->stateFlags&=~2u; return none())

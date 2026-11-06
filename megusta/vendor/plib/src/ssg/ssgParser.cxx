@@ -236,7 +236,8 @@ void _ssgParser::expectNextToken( const char* name )
 // This is copied to a new buffer, so that I have the space to add the 0.
 void _ssgParser::addOneCharToken ( char *ptr ) 
 {
-	assert( (long)onechartokenbuf_ptr- (long)onechartokenbuf < 4096 ) ; // Buffer overflow
+	// MG-PLIB-094: pointer subtraction preserves the same in-buffer check on x64.
+	assert( onechartokenbuf_ptr - onechartokenbuf < 4096 ) ; // Buffer overflow
 	
 	onechartokenbuf_ptr [ 0 ] = *ptr;
 	onechartokenbuf_ptr [ 1 ] = 0;

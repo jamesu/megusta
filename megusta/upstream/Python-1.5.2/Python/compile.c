@@ -132,8 +132,8 @@ code_repr(co)
 		filename = PyString_AsString(co->co_filename);
 	if (co->co_name && PyString_Check(co->co_name))
 		name = PyString_AsString(co->co_name);
-	sprintf(buf, "<code object %.100s at %lx, file \"%.300s\", line %d>",
-		name, (long)co, filename, lineno);
+	sprintf(buf, "<code object %.100s at " Py_PTR_FMT ", file \"%.300s\", line %d>",
+		name, Py_PTR_FMT_ARG(co), filename, lineno);
 	return PyString_FromString(buf);
 }
 

@@ -13,7 +13,7 @@ public:
     std::uint32_t stateFlags;
     std::uint32_t mask;
     void* contextObject;
-    std::uint32_t contextTag;
+    std::uintptr_t contextTag;
     void initialize(GameTaskCallback function, std::uintptr_t argument, int mode);
     void setMask(std::uint32_t value);
     void start(TaskRuntime& runtime);
@@ -42,7 +42,7 @@ struct TaskRuntime {
     void* context;
     TasksManager& scheduledTasks;
     Ball* (*currentBall)(void*);
-    std::uint32_t (*lastTouch)(void*, Ball*);
+    std::uintptr_t (*lastTouch)(void*, Ball*);
     void (*prepareDraw)(void*);
     GameTaskCallback pythonCallbackBridge;
     void (*releasePythonCallback)(std::uintptr_t);

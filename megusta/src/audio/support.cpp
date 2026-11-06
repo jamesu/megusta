@@ -4,9 +4,10 @@
 #include <cfloat>
 #include <limits>
 namespace megusta { namespace audio { namespace ds {
+namespace { Handle nextHandleToken=1; }
 HandleNode* createHandleList() {
     auto* node=static_cast<HandleNode*>(std::malloc(sizeof(HandleNode)));
-    if (node) { node->owner=node; node->payload=nullptr; node->next=node; node->previous=node; }
+    if (node) { node->owner=node; node->payload=nullptr; node->next=node; node->previous=node; node->token=0; }
     return node;
 }
 void destroyHandleList(HandleNode* head) {
@@ -21,7 +22,10 @@ void* nextHandle(HandleNode* head,HandleNode** cursor) {
 HandleNode* insertHandle(HandleNode* head) {
     auto* node=static_cast<HandleNode*>(std::malloc(sizeof(HandleNode)));
     if (node) {
-        node->payload=nullptr;node->owner=head;node->previous=head;node->next=head->next;
+        node->payload=nullptr;node->owner=head;node->token=nextHandleToken++;
+        if (!nextHandleToken) nextHandleToken=1;
+        if (!node->token) node->token=nextHandleToken++;
+        node->previous=head;node->next=head->next;
         node->next->previous=node;node->previous->next=node;
     }
     return node;
@@ -32,15 +36,24 @@ void removeHandle(HandleNode* head,HandleNode* node) {
         node->owner=nullptr;std::free(node);
     }
 }
-bool containsHandle(HandleNode* head,HandleNode* wanted) {
-    if (reinterpret_cast<std::uintptr_t>(wanted)!=0xffffffffu)
-        for (auto* node=head->next;node!=head;node=node->next) if (node==wanted) return true;
-    return false;
+Handle handleValue(HandleNode* node) {
+    if (!node) return 0;
+#if UINTPTR_MAX == 0xffffffffu
+    return static_cast<Handle>(reinterpret_cast<std::uintptr_t>(node));
+#else
+    return node->token;
+#endif
 }
-void* handlePayload(HandleNode* head,HandleNode* wanted) {
-    if (reinterpret_cast<std::uintptr_t>(wanted)!=0xffffffffu)
-        for (auto* node=head->next;node!=head;node=node->next) if (node==wanted) return node->payload;
+HandleNode* findHandle(HandleNode* head,Handle wanted) {
+    if (!head || wanted==0 || wanted==0xffffffffu) return nullptr;
+    for (auto* node=head->next;node!=head;node=node->next)
+        if (handleValue(node)==wanted) return node;
     return nullptr;
+}
+bool containsHandle(HandleNode* head,Handle wanted) { return findHandle(head,wanted)!=nullptr; }
+void* handlePayload(HandleNode* head,Handle wanted) {
+    auto* node=findHandle(head,wanted);
+    return node ? node->payload : nullptr;
 }
 void setHandlePayload(HandleNode* head,HandleNode* node,void* payload) {
     if (node && node->owner==head) node->payload=payload;

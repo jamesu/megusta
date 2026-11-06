@@ -79,6 +79,8 @@ public:
     void drawAll();
     void drawLensPassAll();
 };
+#if UINTPTR_MAX == 0xffffffffu
 static_assert(sizeof(EffectParticle)==180,"Recovered particle stride");
 static_assert(sizeof(Effect)==46240,"Recovered emitter extent");
+#endif
 }

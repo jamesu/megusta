@@ -913,7 +913,11 @@ builtin_id(self, args)
 
 	if (!PyArg_ParseTuple(args, "O:id", &v))
 		return NULL;
+#if SIZEOF_VOID_P > SIZEOF_LONG
+	return PyLong_FromVoidPtr((void *)v);
+#else
 	return PyInt_FromLong((long)v);
+#endif
 }
 
 static char id_doc[] =

@@ -213,11 +213,11 @@ file_repr(f)
 	PyFileObject *f;
 {
 	char buf[300];
-	sprintf(buf, "<%s file '%.256s', mode '%.10s' at %lx>",
+	sprintf(buf, "<%s file '%.256s', mode '%.10s' at " Py_PTR_FMT ">",
 		f->f_fp == NULL ? "closed" : "open",
 		PyString_AsString(f->f_name),
 		PyString_AsString(f->f_mode),
-		(long)f);
+		Py_PTR_FMT_ARG(f));
 	return PyString_FromString(buf);
 }
 

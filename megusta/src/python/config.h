@@ -34,6 +34,28 @@
 #endif
 #include "../../upstream/Python-1.5.2/PC/config.h"
 
+/* The stock VC6 config recognizes 32-bit x86 and Alpha, not Windows x64.
+   Keep its LLP64 long size (4) but report native 64-bit pointers so CPython's
+   existing PyLong_FromVoidPtr/PyLong_AsVoidPtr paths are selected. */
+#if defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64)
+#undef SIZEOF_VOID_P
+#define SIZEOF_VOID_P 8
+#endif
+
+/* Preserve the old address formatting on 32-bit builds while avoiding
+   pointer-to-long truncation in x64 diagnostic repr strings. */
+#if SIZEOF_VOID_P > SIZEOF_LONG
+#define Py_PTR_FMT "%p"
+#define Py_PTR_FMT_ARG(p) ((void *)(p))
+#define Py_PTR_HASH(p) \
+	((long)(((unsigned LONG_LONG)(p)) ^ \
+	       (((unsigned LONG_LONG)(p)) >> (8 * SIZEOF_LONG))))
+#else
+#define Py_PTR_FMT "%lx"
+#define Py_PTR_FMT_ARG(p) ((unsigned long)(p))
+#define Py_PTR_HASH(p) ((long)(p))
+#endif
+
 /* The game is a static embed, not the upstream python15 DLL. */
 #undef MS_COREDLL
 #undef USE_DL_IMPORT

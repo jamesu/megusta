@@ -2,7 +2,7 @@
 #include "scene_triangle.h"
 #include "../engine/runtime_adapters.h"
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(_M_IX86)
 #define MEGUSTA_GAME_FASTCALL __fastcall
 #elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
 #define MEGUSTA_GAME_FASTCALL __attribute__((fastcall))

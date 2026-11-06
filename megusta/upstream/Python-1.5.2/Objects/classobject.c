@@ -350,11 +350,11 @@ class_repr(op)
 	else
 		name = PyString_AsString(op->cl_name);
 	if (mod == NULL || !PyString_Check(mod))
-		sprintf(buf, "<class ?.%.100s at %lx>", name, (long)op);
+		sprintf(buf, "<class ?.%.100s at " Py_PTR_FMT ">", name, Py_PTR_FMT_ARG(op));
 	else
-		sprintf(buf, "<class %.50s.%.50s at %lx>",
+		sprintf(buf, "<class %.50s.%.50s at " Py_PTR_FMT ">",
 			PyString_AsString(mod),
-			name, (long)op);
+			name, Py_PTR_FMT_ARG(op));
 	return PyString_FromString(buf);
 }
 
@@ -745,12 +745,12 @@ instance_repr(inst)
 			cname = "?";
 		PyErr_Clear();
 		if (mod == NULL || !PyString_Check(mod))
-			sprintf(buf, "<?.%.100s instance at %lx>",
-				cname, (long)inst);
+			sprintf(buf, "<?.%.100s instance at " Py_PTR_FMT ">",
+				cname, Py_PTR_FMT_ARG(inst));
 		else
-			sprintf(buf, "<%.50s.%.50s instance at %lx>",
+			sprintf(buf, "<%.50s.%.50s instance at " Py_PTR_FMT ">",
 				PyString_AsString(mod),
-				cname, (long)inst);
+				cname, Py_PTR_FMT_ARG(inst));
 		return PyString_FromString(buf);
 	}
 	res = PyEval_CallObject(func, (PyObject *)NULL);
@@ -811,7 +811,7 @@ instance_hash(inst)
 		func = instance_getattr(inst, cmpstr);
 		if (func == NULL) {
 			PyErr_Clear();
-			outcome = (long)inst;
+			outcome = Py_PTR_HASH(inst);
 			if (outcome == -1)
 				outcome = -2;
 			return outcome;
@@ -1572,8 +1572,8 @@ instancemethod_repr(a)
 			icname = PyString_AsString(iclassname);
 		else
 			icname = "?";
-		sprintf(buf, "<method %.60s.%.60s of %.60s instance at %lx>",
-			fcname, fname, icname, (long)self);
+		sprintf(buf, "<method %.60s.%.60s of %.60s instance at " Py_PTR_FMT ">",
+			fcname, fname, icname, Py_PTR_FMT_ARG(self));
 	}
 	return PyString_FromString(buf);
 }

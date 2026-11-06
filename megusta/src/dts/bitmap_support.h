@@ -28,6 +28,7 @@ struct EngineBitmapView {
     std::uint32_t auxiliaryBytes1;
     std::uint32_t auxiliaryMipOffsets1[10];
 };
+#if UINTPTR_MAX == 0xffffffffu
 static_assert(sizeof(EngineBitmapView)==0xb0,"recovered 32-bit bitmap object size");
 static_assert(offsetof(EngineBitmapView,bytesPerPixel)==0x18,"recovered bitmap stride offset");
 static_assert(offsetof(EngineBitmapView,mipCount)==0x1c,"recovered bitmap mip-count offset");
@@ -38,6 +39,7 @@ static_assert(offsetof(EngineBitmapView,auxiliaryMipOffsets0)==0x54,"recovered f
 static_assert(offsetof(EngineBitmapView,auxiliaryMipCount0)==0x7c,"recovered auxiliary mip-count offset");
 static_assert(offsetof(EngineBitmapView,auxiliaryPixels1)==0x80,"recovered second auxiliary plane");
 static_assert(offsetof(EngineBitmapView,auxiliaryMipOffsets1)==0x88,"recovered second auxiliary offsets");
+#endif
 
 using BitmapPaletteDestroy = void (*)(void* palette);
 using BitmapReadPng = bool (*)(EngineBitmapView*,void* file);

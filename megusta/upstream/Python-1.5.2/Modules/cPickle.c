@@ -63,6 +63,14 @@ static char cPickle_module_documentation[] =
 
 #include <errno.h>
 
+/* cPickle uses object addresses as private memo keys. Keep those keys full-width
+   on LLP64 while retaining the original PyInt keys on 32-bit builds. */
+#if SIZEOF_VOID_P > SIZEOF_LONG
+#define cPickle_ObjectId(p) PyLong_FromVoidPtr((void *)(p))
+#else
+#define cPickle_ObjectId(p) PyInt_FromLong((long)(p))
+#endif
+
 #define UNLESS(E) if (!(E))
 
 #define DEL_LIST_SLICE(list, from, to) (PyList_SetSlice(list, from, to, NULL))
@@ -723,7 +731,7 @@ put2(Picklerobject *self, PyObject *ob) {
 
     p++;  /* Make sure memo keys are positive! */
 
-    UNLESS (py_ob_id = PyInt_FromLong((long)ob))
+    UNLESS (py_ob_id = cPickle_ObjectId(ob))
         goto finally;
 
     UNLESS (memo_len = PyInt_FromLong(p))
@@ -1178,7 +1186,7 @@ save_tuple(Picklerobject *self, PyObject *args) {
             goto finally;
     }
 
-    UNLESS (py_tuple_id = PyInt_FromLong((long)args))
+    UNLESS (py_tuple_id = cPickle_ObjectId(args))
         goto finally;
 
     if (len) {
@@ -1692,12 +1700,9 @@ save(Picklerobject *self, PyObject *args, int  pers_save) {
     }
 
     if (args->ob_refcnt > 1) {
-        long ob_id;
         int  has_key;
 
-        ob_id = (long)args;
-
-        UNLESS (py_ob_id = PyInt_FromLong(ob_id))
+        UNLESS (py_ob_id = cPickle_ObjectId(args))
             goto finally;
 
         if ((has_key = cPickle_PyMapping_HasKey(self->memo, py_ob_id)) < 0)

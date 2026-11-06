@@ -3,8 +3,10 @@
 #include <cstring>
 namespace megusta { namespace audio { namespace ds {
 ImplementationState implementation{};
+#if UINTPTR_MAX == 0xffffffffu
 static_assert(sizeof(Context)==156 && sizeof(Source)==92 && sizeof(Buffer)==52 && sizeof(Listener)==76,
     "Recovered 32-bit audio records");
+#endif
 ErrorState* createErrorState() {
     auto* error=static_cast<ErrorState*>(std::malloc(sizeof(ErrorState)));
     if (error) error->stickyError=0;
@@ -91,10 +93,10 @@ void shutdown() {
     // The executable leaves currentContext unchanged after destruction.
 }
 Buffer* contextBuffer(Context* context,Handle handle) {
-    return static_cast<Buffer*>(handlePayload(context->bufferHandles,reinterpret_cast<HandleNode*>(handle)));
+    return static_cast<Buffer*>(handlePayload(context->bufferHandles,handle));
 }
 Source* contextSource(Context* context,Handle handle) {
-    return static_cast<Source*>(handlePayload(context->sourceHandles,reinterpret_cast<HandleNode*>(handle)));
+    return static_cast<Source*>(handlePayload(context->sourceHandles,handle));
 }
 Listener* createListener(Context* context) {
     auto* listener=static_cast<Listener*>(std::malloc(sizeof(Listener)));

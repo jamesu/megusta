@@ -173,12 +173,12 @@ PyObject_Print(op, fp, flags)
 	}
 	else {
 		if (op->ob_refcnt <= 0)
-			fprintf(fp, "<refcnt %u at %lx>",
-				op->ob_refcnt, (long)op);
+			fprintf(fp, "<refcnt %u at " Py_PTR_FMT ">",
+				op->ob_refcnt, Py_PTR_FMT_ARG(op));
 		else if (op->ob_type->tp_print == NULL) {
 			if (op->ob_type->tp_repr == NULL) {
-				fprintf(fp, "<%s object at %lx>",
-					op->ob_type->tp_name, (long)op);
+				fprintf(fp, "<%s object at " Py_PTR_FMT ">",
+					op->ob_type->tp_name, Py_PTR_FMT_ARG(op));
 			}
 			else {
 				PyObject *s;
@@ -229,8 +229,8 @@ PyObject_Repr(v)
 		return PyString_FromString("<NULL>");
 	else if (v->ob_type->tp_repr == NULL) {
 		char buf[120];
-		sprintf(buf, "<%.80s object at %lx>",
-			v->ob_type->tp_name, (long)v);
+		sprintf(buf, "<%.80s object at " Py_PTR_FMT ">",
+			v->ob_type->tp_name, Py_PTR_FMT_ARG(v));
 		return PyString_FromString(buf);
 	}
 	else
@@ -346,10 +346,15 @@ PyObject_Hash(v)
 	PyObject *v;
 {
 	PyTypeObject *tp = v->ob_type;
+	long h;
 	if (tp->tp_hash != NULL)
 		return (*tp->tp_hash)(v);
-	if (tp->tp_compare == NULL)
-		return (long) v; /* Use address as hash value */
+	if (tp->tp_compare == NULL) {
+		h = Py_PTR_HASH(v); /* Use the object address as hash input. */
+		if (h == -1)
+			h = -2;
+		return h;
+	}
 	/* If there's a cmp but no hash defined, the object can't be hashed */
 	PyErr_SetString(PyExc_TypeError, "unhashable type");
 	return -1;

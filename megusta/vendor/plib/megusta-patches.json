@@ -1,7 +1,7 @@
 {
   "base": "PLIB 1.3.2",
   "patches": {
-    "patches/plib/0001-megusta.patch": "70d059853c2688d42d8c790339c9e20e8ebfb8dbea5d232a1379886d9e189b61",
+    "patches/plib/0001-megusta.patch": "841d0d2c34b68d1a325a40ad7f4fb6eadf9db7b7664179640c88f3a75edbeb70",
     "patches/plib/0099-fnt-mounted-resource-io.patch": "7de61505f13b267de76082299158e1f955bdb20395b1d42492f7cf51a1c35cc2",
     "patches/plib/0100-pui-explicit-deferred-cleanup.patch": "2e025b8895b10787bd85425b750508cd82dd81762e24de79232e22b4876d0a48",
     "patches/plib/0101-ssg-mounted-scene-streams.patch": "b56e709bdbe0fc5f3c5a4ecccb7a473e113dee3970fc4238c796e74548f56953",
@@ -199,7 +199,7 @@
     "src/ssg/ssgLocal.h": "1d678e2e29ca2ad24813951677a197aff9e7abffa78d2b752ca2eb4ca610d8fd",
     "src/ssg/ssgMSFSPalette.h": "4a6c01433b0bd2ce9c3678bc36a6b7eb83ebbffbe6c993a4d07537a5207fa244",
     "src/ssg/ssgOptimiser.cxx": "59102d759804aaff4c9eebbbb525f7534bef7af7ca0d56c07e8cc333fbecb8db",
-    "src/ssg/ssgParser.cxx": "9ebc8b297d172d7f73cea94b00d64919311403678fa3fb783672a554ae564ce3",
+    "src/ssg/ssgParser.cxx": "8411a0d3f5b80a0f99746cbaa35b468ceaa859e0b1b075d486eaa1d03a9018c1",
     "src/ssg/ssgParser.h": "4c5f5a43852e0aef82c52fa2021d5496e93fbd41097d9ee06f4416ddbb79d198",
     "src/ssg/ssgRangeSelector.cxx": "ca00748faf24041cc4235e82ba4d886f1ab2c44378f11aaa8da016223a9d1b70",
     "src/ssg/ssgRoot.cxx": "1f7491e3fcdab8e3f51394aec78836d5bf1ab838ed748e2d052641cefe6c7ff7",

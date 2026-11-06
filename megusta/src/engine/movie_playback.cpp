@@ -177,7 +177,8 @@ int MoviePlayback::playBlocking(const MovieHost& host,const char* name,unsigned 
     } else {
         sharedIo->stdioPrintf("WINML: Using primary video player\n");
         if (engineMovie_sendMciCommand_impl("open avivideo",nullptr,nullptr,0)) {
-            std::sprintf(buffer,"open %s alias mov style child parent %u",filename,static_cast<unsigned>(reinterpret_cast<std::uintptr_t>(window)));
+            std::sprintf(buffer,"open %s alias mov style child parent %llu",filename,
+                static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(window)));
             if (engineMovie_sendMciCommand_impl(buffer,nullptr,nullptr,0)) {
                 engineMovie_sendMciCommand_impl("status mov window handle",nullptr,buffer,sizeof(buffer));
                 engineMovie_sendMciCommand_impl("put mov destination",window,nullptr,0);

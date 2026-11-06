@@ -46,11 +46,11 @@ set_target_properties(megusta_python PROPERTIES
   C_STANDARD_REQUIRED OFF
   C_EXTENSIONS ON)
 if(NOT MSVC AND CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
-  # Upstream python15 Release uses /O2. The x86 MSVC 5/6 target uses x87;
-  # preserve that arithmetic profile and the old compiler's aliasing behavior.
-  target_compile_options(megusta_python PRIVATE
-    -O2 -mfpmath=387 -mno-sse -mno-sse2
-    -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
+  # The original x86 build uses x87. x64 uses the platform's native FP ABI.
+  target_compile_options(megusta_python PRIVATE -O2 -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    target_compile_options(megusta_python PRIVATE -mfpmath=387 -mno-sse -mno-sse2)
+  endif()
 elseif(MSVC)
   target_compile_options(megusta_python PRIVATE /O2)
   set_property(TARGET megusta_python PROPERTY

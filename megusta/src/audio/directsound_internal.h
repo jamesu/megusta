@@ -7,7 +7,7 @@
 #include <cstdio>
 namespace megusta { namespace audio { namespace ds {
 struct ErrorState { int stickyError; };
-struct HandleNode { HandleNode* owner; void* payload; HandleNode* next; HandleNode* previous; };
+struct HandleNode { HandleNode* owner; void* payload; HandleNode* next; HandleNode* previous; Handle token; };
 struct Buffer {
     std::uint32_t format,frequency,bits,channels,dataBytes,segmentBytes;
     ResourceFile* streamFile; void* pcmData; std::uint32_t reservedZero20;
@@ -49,8 +49,9 @@ Source* createSource(); void destroySource(Source*);
 Buffer* createBuffer(); void destroyBuffer(Buffer*);
 HandleNode* createHandleList(); void destroyHandleList(HandleNode*);
 void* nextHandle(HandleNode*,HandleNode**); HandleNode* insertHandle(HandleNode*);
-void removeHandle(HandleNode*,HandleNode*); bool containsHandle(HandleNode*,HandleNode*);
-void* handlePayload(HandleNode*,HandleNode*); void setHandlePayload(HandleNode*,HandleNode*,void*);
+Handle handleValue(HandleNode*); HandleNode* findHandle(HandleNode*,Handle);
+void removeHandle(HandleNode*,HandleNode*); bool containsHandle(HandleNode*,Handle);
+void* handlePayload(HandleNode*,Handle); void setHandlePayload(HandleNode*,HandleNode*,void*);
 int gainToAttenuation(double); int panToUnits(double); void crossProduct(const float*,const float*,float*);
 std::int64_t truncateX87(long double);
 int getError(Context*);

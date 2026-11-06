@@ -7843,7 +7843,7 @@
  static char *EOF_string = "EOF reached";
  static char *EOL_string = "EOL reached";
  
-@@ -234,6 +227,8 @@
+@@ -234,11 +227,14 @@
      error("missing %s",name) ;
  }
  
@@ -7852,7 +7852,14 @@
  // internal function. A token consisting of a single char has been found.
  // This is copied to a new buffer, so that I have the space to add the 0.
  void _ssgParser::addOneCharToken ( char *ptr ) 
-@@ -246,7 +241,8 @@
+ {
+-	assert( (long)onechartokenbuf_ptr- (long)onechartokenbuf < 4096 ) ; // Buffer overflow
++	// MG-PLIB-094: pointer subtraction preserves the same in-buffer check on x64.
++	assert( onechartokenbuf_ptr - onechartokenbuf < 4096 ) ; // Buffer overflow
+ 	
+ 	onechartokenbuf_ptr [ 0 ] = *ptr;
+ 	onechartokenbuf_ptr [ 1 ] = 0;
+@@ -246,7 +242,8 @@
  	onechartokenbuf_ptr += 2; // prepare for nect onechartoken
  }
  
@@ -7862,7 +7869,7 @@
  // like strchr, but string may be NULL
  {
  	if (string == NULL )
-@@ -264,7 +260,7 @@
+@@ -264,7 +261,7 @@
    tokbuf [ 0 ] = 0 ;
    numtok = 0 ;
    curtok = 0 ;
@@ -7871,7 +7878,7 @@
  	onechartokenbuf_ptr = onechartokenbuf ;
  	
    //get the next line with something on it
-@@ -273,9 +269,7 @@
+@@ -273,9 +270,7 @@
    {
  		linenum++ ;
  		if ( fgets ( linebuf, sizeof(linebuf), fileptr ) == NULL )
@@ -7882,7 +7889,7 @@
  		}
  		memcpy( tokbuf, linebuf, sizeof(linebuf) ) ;
  		ptr = tokbuf ;
-@@ -370,13 +364,13 @@
+@@ -370,13 +365,13 @@
  
  char* _ssgParser::parseToken( const char* name )
  // returns the next token from the current line.
@@ -7900,7 +7907,7 @@
  		if ( name )
  			error("missing %s",name) ;
  	}
-@@ -384,82 +378,35 @@
+@@ -384,82 +379,35 @@
  }
  
  

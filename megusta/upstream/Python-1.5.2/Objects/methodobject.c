@@ -149,9 +149,9 @@ meth_repr(m)
 		sprintf(buf, "<built-in function %.80s>", m->m_ml->ml_name);
 	else
 		sprintf(buf,
-			"<built-in method %.80s of %.80s object at %lx>",
+			"<built-in method %.80s of %.80s object at " Py_PTR_FMT ">",
 			m->m_ml->ml_name, m->m_self->ob_type->tp_name,
-			(long)m->m_self);
+			Py_PTR_FMT_ARG(m->m_self));
 	return PyString_FromString(buf);
 }
 
@@ -181,7 +181,12 @@ meth_hash(a)
 		if (x == -1)
 			return -1;
 	}
-	return x ^ (long) a->m_ml->ml_meth;
+	x ^= Py_PTR_HASH(a->m_ml->ml_meth);
+#if SIZEOF_VOID_P > SIZEOF_LONG
+	if (x == -1)
+		x = -2;
+#endif
+	return x;
 }
 
 PyTypeObject PyCFunction_Type = {

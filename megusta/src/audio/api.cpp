@@ -14,7 +14,7 @@ std::uint32_t genBuffers(Context* context,std::uint32_t count,Handle* handles) {
     std::uint32_t generated=0;
     while (generated<count) {
         auto* node=insertHandle(context->bufferHandles);
-        handles[generated]=reinterpret_cast<std::uintptr_t>(node);
+        handles[generated]=handleValue(node);
         auto* buffer=createBuffer();
         if (!node || !buffer) {
             destroyBuffer(buffer);removeHandle(context->bufferHandles,node);
@@ -29,18 +29,18 @@ void deleteBuffers(Context* context,std::uint32_t count,const Handle* handles) {
     for (std::uint32_t i=0;i<count;++i) {
         auto* buffer=contextBuffer(context,handles[i]);
         if (!buffer) setError(context,InvalidValue,"alDeleteBuffers");
-        else { destroyBuffer(buffer);removeHandle(context->bufferHandles,reinterpret_cast<HandleNode*>(handles[i])); }
+        else { destroyBuffer(buffer);removeHandle(context->bufferHandles,findHandle(context->bufferHandles,handles[i])); }
     }
 }
 bool isBuffer(Context* context,Handle handle) {
-    return containsHandle(context->bufferHandles,reinterpret_cast<HandleNode*>(handle));
+    return containsHandle(context->bufferHandles,handle);
 }
 std::uint32_t genSources(Context* context,std::uint32_t count,Handle* handles) {
     if (!handles) { setError(context,InvalidOperation,"alGenSources");return 0; }
     std::uint32_t generated=0;
     while (generated<count) {
         auto* node=insertHandle(context->sourceHandles);
-        handles[generated]=reinterpret_cast<std::uintptr_t>(node);
+        handles[generated]=handleValue(node);
         auto* source=createSource();
         if (!node || !source) {
             destroySource(source);removeHandle(context->sourceHandles,node);
@@ -55,7 +55,7 @@ void deleteSources(Context* context,std::uint32_t count,const Handle* handles) {
     for (std::uint32_t i=0;i<count;++i) {
         auto* source=contextSource(context,handles[i]);
         if (!source) setError(context,InvalidValue,"alDeleteSources");
-        else { destroySource(source);removeHandle(context->sourceHandles,reinterpret_cast<HandleNode*>(handles[i])); }
+        else { destroySource(source);removeHandle(context->sourceHandles,findHandle(context->sourceHandles,handles[i])); }
     }
 }
 void listenerf(Context* context,int token,float value) {

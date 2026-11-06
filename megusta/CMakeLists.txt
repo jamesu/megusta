@@ -13,8 +13,13 @@ option(MEGUSTA_GAME_PRESERVE_LAUNCH_CWD
   "Preserve the debugger/launcher working directory instead of changing to the executable directory" OFF)
 set(MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY "" CACHE PATH
   "Optional Visual Studio debugger working directory for megusta_game")
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
-  message(FATAL_ERROR "Megusta requires a 32-bit target")
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  add_compile_definitions(MEGUSTA_NATIVE_64BIT=1)
+elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message(FATAL_ERROR "Megusta supports 32-bit and 64-bit targets only")
+endif()
+if(MEGUSTA_DTS_ENABLE_ABI_WRAPPERS AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message(FATAL_ERROR "Recovered DTS address/ABI wrappers are 32-bit only; disable MEGUSTA_DTS_ENABLE_ABI_WRAPPERS for x64")
 endif()
 option(MEGUSTA_BROWSER "Build a browser Wasm platform adapter" OFF)
 option(MEGUSTA_HEADLESS "Build without browser/window services" OFF)
@@ -60,9 +65,10 @@ if(NOT MSVC AND CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
   # Period-appropriate optimized C build. The PNG path uses x87 arithmetic;
   # the zlib codec is integer-only and keeps conservative aliasing semantics.
   target_compile_options(megusta_zlib PRIVATE -O2 -fno-strict-aliasing)
-  target_compile_options(megusta_png PRIVATE
-    -O2 -mfpmath=387 -mno-sse -mno-sse2
-    -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
+  target_compile_options(megusta_png PRIVATE -O2 -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    target_compile_options(megusta_png PRIVATE -mfpmath=387 -mno-sse -mno-sse2)
+  endif()
 elseif(MSVC)
   target_compile_options(megusta_zlib PRIVATE /O2)
   target_compile_options(megusta_png PRIVATE /O2 /fp:precise)
@@ -79,9 +85,12 @@ if(WIN32)
   # does not select x87 when the compiler targets i686.
   function(megusta_apply_vc6_x87_model target)
     if(NOT MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-      target_compile_options(${target} PRIVATE
-        -O2 -mfpmath=387 -mno-sse -mno-sse2
-        -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
+      target_compile_options(${target} PRIVATE -O2 -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
+      if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        target_compile_options(${target} PRIVATE -mfpmath=387 -mno-sse -mno-sse2)
+      endif()
+    elseif(MSVC)
+      target_compile_options(${target} PRIVATE /fp:precise)
     endif()
   endfunction()
 

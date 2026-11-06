@@ -4,13 +4,23 @@
 // These C-linkage adapters take `self` explicitly. MSVC cannot mark a free
 // function __thiscall; keep the declaration/call convention consistent.
 // ClangCL accepts the GNU thiscall attribute and preserves the x86 ABI.
+#if defined(_M_IX86)
 #define MEGUSTA_THREAD_THISCALL
 #define MEGUSTA_THREAD_CDECL __cdecl
 #define MEGUSTA_THREAD_FASTCALL __fastcall
 #else
+#define MEGUSTA_THREAD_THISCALL
+#define MEGUSTA_THREAD_CDECL
+#define MEGUSTA_THREAD_FASTCALL
+#endif
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
 #define MEGUSTA_THREAD_THISCALL __attribute__((thiscall))
 #define MEGUSTA_THREAD_CDECL __attribute__((cdecl))
 #define MEGUSTA_THREAD_FASTCALL __attribute__((fastcall))
+#else
+#define MEGUSTA_THREAD_THISCALL
+#define MEGUSTA_THREAD_CDECL
+#define MEGUSTA_THREAD_FASTCALL
 #endif
 namespace megusta { namespace dts {
 class TSShapeInstance;

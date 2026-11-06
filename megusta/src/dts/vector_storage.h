@@ -8,13 +8,23 @@ namespace megusta { namespace dts {
 // MSVC only accepts __thiscall on native member functions, so use its default
 // free-function convention here; declarations and definitions share it.
 // ClangCL accepts the GNU thiscall attribute and keeps the x86 register ABI.
+#if defined(_M_IX86)
 #define MEGUSTA_DTS_THISCALL
 #define MEGUSTA_DTS_CDECL __cdecl
 #define MEGUSTA_DTS_FASTCALL __fastcall
 #else
+#define MEGUSTA_DTS_THISCALL
+#define MEGUSTA_DTS_CDECL
+#define MEGUSTA_DTS_FASTCALL
+#endif
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
 #define MEGUSTA_DTS_THISCALL __attribute__((thiscall))
 #define MEGUSTA_DTS_CDECL __attribute__((cdecl))
 #define MEGUSTA_DTS_FASTCALL __attribute__((fastcall))
+#else
+#define MEGUSTA_DTS_THISCALL
+#define MEGUSTA_DTS_CDECL
+#define MEGUSTA_DTS_FASTCALL
 #endif
 
 // Recovered 12-byte DTS vector header: count, data pointer, capacity. The
@@ -28,7 +38,9 @@ struct DTSVectorStorage {
     bool increment(std::uint32_t amount,std::uint32_t elementSize);
     void construct(std::uint32_t initialCount,std::uint32_t elementSize);
 };
+#if UINTPTR_MAX == 0xffffffffu
 static_assert(sizeof(DTSVectorStorage)==12,"DTS vector header width on the 32-bit target");
+#endif
 
 extern "C" bool MEGUSTA_DTS_CDECL DTS_Vector_resizeStorage(
     std::uint32_t* capacity,std::uint32_t* count,void** data,

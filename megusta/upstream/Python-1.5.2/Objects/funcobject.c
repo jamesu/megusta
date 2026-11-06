@@ -200,11 +200,11 @@ func_repr(op)
 {
 	char buf[140];
 	if (op->func_name == Py_None)
-		sprintf(buf, "<anonymous function at %lx>", (long)op);
+		sprintf(buf, "<anonymous function at " Py_PTR_FMT ">", Py_PTR_FMT_ARG(op));
 	else
-		sprintf(buf, "<function %.100s at %lx>",
+		sprintf(buf, "<function %.100s at " Py_PTR_FMT ">",
 			PyString_AsString(op->func_name),
-			(long)op);
+			Py_PTR_FMT_ARG(op));
 	return PyString_FromString(buf);
 }
 
@@ -234,7 +234,7 @@ func_hash(f)
 	long h;
 	h = PyObject_Hash(f->func_code);
 	if (h == -1) return h;
-	h = h ^ (long)f->func_globals;
+	h = h ^ Py_PTR_HASH(f->func_globals);
 	if (h == -1) h = -2;
 	return h;
 }
