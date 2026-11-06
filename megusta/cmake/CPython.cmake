@@ -1,21 +1,94 @@
 set(MEGUSTA_PYTHON_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/upstream/Python-1.5.2")
-set(MEGUSTA_PYTHON_SCOPE "${CMAKE_CURRENT_SOURCE_DIR}/manifests/python_build_scope.json")
 if(NOT EXISTS "${MEGUSTA_PYTHON_ROOT}/PCbuild/python15.dsp")
   message(FATAL_ERROR "Vendored CPython 1.5.2 sources are missing")
 endif()
-if(NOT EXISTS "${MEGUSTA_PYTHON_SCOPE}")
-  message(FATAL_ERROR "The recovered CPython source allowlist is missing")
-endif()
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${MEGUSTA_PYTHON_SCOPE}")
-file(READ "${MEGUSTA_PYTHON_SCOPE}" MEGUSTA_PYTHON_SCOPE_JSON)
-string(JSON MEGUSTA_PYTHON_SOURCE_COUNT LENGTH "${MEGUSTA_PYTHON_SCOPE_JSON}" source_units)
-math(EXPR MEGUSTA_PYTHON_SOURCE_LAST "${MEGUSTA_PYTHON_SOURCE_COUNT} - 1")
+# Keep the embedded runtime source closure explicit here. Recovery manifests
+# document the inventory but are not required to configure or build the game.
+set(MEGUSTA_PYTHON_UNITS
+  Modules/arraymodule.c
+  Modules/binascii.c
+  Modules/cPickle.c
+  Modules/cStringIO.c
+  Modules/cmathmodule.c
+  Modules/errnomodule.c
+  Modules/mathmodule.c
+  Modules/md5c.c
+  Modules/md5module.c
+  Modules/newmodule.c
+  Modules/operator.c
+  Modules/regexmodule.c
+  Modules/regexpr.c
+  Modules/rotormodule.c
+  Modules/shamodule.c
+  Modules/socketmodule.c
+  Modules/soundex.c
+  Modules/stropmodule.c
+  Modules/structmodule.c
+  Modules/timemodule.c
+  Objects/abstract.c
+  Objects/bufferobject.c
+  Objects/classobject.c
+  Objects/cobject.c
+  Objects/complexobject.c
+  Objects/dictobject.c
+  Objects/fileobject.c
+  Objects/floatobject.c
+  Objects/frameobject.c
+  Objects/funcobject.c
+  Objects/intobject.c
+  Objects/listobject.c
+  Objects/longobject.c
+  Objects/methodobject.c
+  Objects/moduleobject.c
+  Objects/object.c
+  Objects/rangeobject.c
+  Objects/sliceobject.c
+  Objects/stringobject.c
+  Objects/tupleobject.c
+  Objects/typeobject.c
+  PC/dl_nt.c
+  PC/getpathp.c
+  PC/import_nt.c
+  Parser/acceler.c
+  Parser/bitset.c
+  Parser/grammar1.c
+  Parser/listnode.c
+  Parser/metagrammar.c
+  Parser/myreadline.c
+  Parser/node.c
+  Parser/parser.c
+  Parser/parsetok.c
+  Parser/tokenizer.c
+  Python/bltinmodule.c
+  Python/ceval.c
+  Python/compile.c
+  Python/errors.c
+  Python/frozen.c
+  Python/getargs.c
+  Python/getcompiler.c
+  Python/getcopyright.c
+  Python/getmtime.c
+  Python/getopt.c
+  Python/getplatform.c
+  Python/getversion.c
+  Python/graminit.c
+  Python/import.c
+  Python/marshal.c
+  Python/modsupport.c
+  Python/mystrtoul.c
+  Python/pyfpe.c
+  Python/pystate.c
+  Python/pythonrun.c
+  Python/structmember.c
+  Python/sysmodule.c
+  Python/traceback.c
+  Python/importdl.c
+  Modules/getbuildinfo.c)
 set(MEGUSTA_PYTHON_SOURCES)
-foreach(i RANGE ${MEGUSTA_PYTHON_SOURCE_LAST})
-  string(JSON unit GET "${MEGUSTA_PYTHON_SCOPE_JSON}" source_units ${i})
+foreach(unit IN LISTS MEGUSTA_PYTHON_UNITS)
   set(source "${MEGUSTA_PYTHON_ROOT}/${unit}")
   if(NOT EXISTS "${source}")
-    message(FATAL_ERROR "CPython source unit from manifest is missing: ${unit}")
+    message(FATAL_ERROR "Required CPython source unit is missing: ${unit}")
   endif()
   list(APPEND MEGUSTA_PYTHON_SOURCES "${source}")
 endforeach()

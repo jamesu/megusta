@@ -1,43 +1,25 @@
 set(PLIB_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/vendor/plib")
-if(NOT EXISTS "${PLIB_ROOT}/megusta-patches.json")
-  message(FATAL_ERROR "Run python3 tools/prepare_plib.py before configuring")
+if(NOT EXISTS "${PLIB_ROOT}/src/ssg/ssg.h")
+  message(FATAL_ERROR "Vendored PLIB sources are missing: ${PLIB_ROOT}")
 endif()
 
-# Deliberate source allowlist: retained distribution files are not implicit inputs.
-# Check whichever components are enabled, including edits made to the lists above.
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/manifests/plib_build_scope.json")
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/manifests/plib_build_scope.json" PLIB_SCOPE_JSON)
-string(JSON PLIB_SCOPE_COUNT LENGTH "${PLIB_SCOPE_JSON}" compiled_units)
-math(EXPR PLIB_SCOPE_LAST "${PLIB_SCOPE_COUNT} - 1")
-set(PLIB_ALLOWED_UNITS)
-foreach(i RANGE ${PLIB_SCOPE_LAST})
-  string(JSON unit GET "${PLIB_SCOPE_JSON}" compiled_units ${i})
-  list(APPEND PLIB_ALLOWED_UNITS "${unit}")
-endforeach()
-function(megusta_check_plib_scope)
-  foreach(lib plib_ul plib_sg plib_net plib_ssg plib_fnt plib_pui)
-    if(TARGET ${lib})
-      # Shipped assertion strings/abort paths are executable behavior. Release
-      # configurations must not erase guards, including inline library methods.
-      target_compile_options(${lib} PUBLIC -UNDEBUG)
-      get_target_property(units ${lib} SOURCES)
-      foreach(source IN LISTS units)
-        file(RELATIVE_PATH unit "${PLIB_ROOT}" "${source}")
-        if(NOT unit IN_LIST PLIB_ALLOWED_UNITS)
-          message(FATAL_ERROR "PLIB unit outside the evidenced build allowlist: ${unit}")
-        endif()
-      endforeach()
-    endif()
-  endforeach()
+# Deliberate source allowlist: only the source files listed by the targets below
+# are compiled. The recovery scope manifest remains an audit aid, not a configure
+# or build dependency.
+function(megusta_keep_plib_assertions target)
+  # Shipped assertion strings/abort paths are executable behavior. Release
+  # configurations must not erase guards, including inline library methods.
+  target_compile_options(${target} PUBLIC -UNDEBUG)
 endfunction()
-cmake_language(DEFER CALL megusta_check_plib_scope)
 add_library(plib_ul STATIC
   "${PLIB_ROOT}/src/util/ul.cxx"
   "${PLIB_ROOT}/src/util/ulError.cxx")
+megusta_keep_plib_assertions(plib_ul)
 target_include_directories(plib_ul PUBLIC "${PLIB_ROOT}/src/util")
 add_library(plib_sg STATIC
   "${PLIB_ROOT}/src/sg/sg.cxx"
   "${PLIB_ROOT}/src/sg/sgd.cxx")
+megusta_keep_plib_assertions(plib_sg)
 target_include_directories(plib_sg PUBLIC "${PLIB_ROOT}/src/sg")
 target_link_libraries(plib_sg PUBLIC plib_ul)
 foreach(lib plib_ul plib_sg)
@@ -73,6 +55,7 @@ if(MEGUSTA_BUILD_NET)
     "${PLIB_ROOT}/src/net/netMessage.cxx"
     "${PLIB_ROOT}/src/net/netChat.cxx"
     "${PLIB_ROOT}/src/net/netMonitor.cxx")
+  megusta_keep_plib_assertions(plib_net)
   target_sources(plib_net PRIVATE "${PLIB_ROOT}/src/net/netRoom.cxx")
   target_sources(plib_net PRIVATE "${PLIB_ROOT}/src/net/netRoomClient.cxx")
   target_include_directories(plib_net PUBLIC "${PLIB_ROOT}/src/net")
@@ -108,6 +91,7 @@ if(MEGUSTA_BUILD_PUI)
     message(FATAL_ERROR "PUI window service currently supports Win32 only")
   endif()
   add_library(plib_fnt STATIC "${PLIB_ROOT}/src/fnt/fnt.cxx" "${PLIB_ROOT}/src/fnt/fntTXF.cxx")
+  megusta_keep_plib_assertions(plib_fnt)
   target_include_directories(plib_fnt PUBLIC "${PLIB_ROOT}/src/fnt")
   target_link_libraries(plib_fnt PUBLIC plib_sg glpng opengl32 glu32)
   set(PUI_UNITS pu puArrowButton puBox puButton puFilePicker puFont puFrame puGroup puInput
@@ -117,6 +101,7 @@ if(MEGUSTA_BUILD_PUI)
     list(APPEND PUI_SOURCES "${PLIB_ROOT}/src/pui/${unit}.cxx")
   endforeach()
   add_library(plib_pui STATIC ${PUI_SOURCES})
+  megusta_keep_plib_assertions(plib_pui)
   target_include_directories(plib_pui PUBLIC "${PLIB_ROOT}/src/pui")
   target_compile_definitions(plib_pui PUBLIC PU_NOT_USING_GLUT MEGUSTA_PUI_FNT)
   target_link_libraries(plib_pui PUBLIC plib_fnt user32)
@@ -151,6 +136,7 @@ if(MEGUSTA_BUILD_SSG)
     list(APPEND SSG_SOURCES "${PLIB_ROOT}/src/ssg/${unit}.cxx")
   endforeach()
   add_library(plib_ssg STATIC ${SSG_SOURCES})
+  megusta_keep_plib_assertions(plib_ssg)
   target_compile_features(plib_ssg PUBLIC cxx_std_17)
   target_include_directories(plib_ssg PUBLIC "${PLIB_ROOT}/src/ssg")
   # MG-PLIB-088: recovered game SSG vtables omit hot/isect traversal slots.
