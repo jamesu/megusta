@@ -107,6 +107,9 @@ namespace megusta {
 // 00434ad0: sample an 8-by-8 world-space footprint; out-of-grid samples
 // use the original -999 sentinel. Wide intermediates preserve x87 iteration.
 bool SpatialRepel::testPointHeightClearance(const float* point) const {
+    // The camera can visit a dropcloth before the scene collision index has
+    // produced a height map. With no map there is no sampled obstruction.
+    if (!heightGrid_ || gridColumns_ <= 0 || gridRows_ <= 0) return false;
     const long double xEnd = static_cast<long double>(point[0]) + 4.0L;
     const long double yEnd = static_cast<long double>(point[1]) + 4.0L;
     for (long double x = static_cast<long double>(point[0]) - 4.0L; x < xEnd; x += 1.0L) {

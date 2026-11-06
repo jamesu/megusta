@@ -44,7 +44,11 @@ void SpatialRepel::rasterizeTriangleHeights(Point3F a,Point3F b,Point3F c) {
     }
 }
 void SpatialRepel::rebuildHeightGrid(SceneObjectCollection& objects,SceneGridIndex& grid) {
-    if (!grid.cellOffsets || !(std::fabs(gridMinX_-(transform_[3][0]-radius_))>=0.1L)) return;
+    // heightGrid_ is the cache-validity sentinel. The original bounds fields
+    // are not initialized by the recovered constructor, so do not read them
+    // until a grid has actually been allocated.
+    if (!grid.cellOffsets) return;
+    if (heightGrid_ && !(std::fabs(gridMinX_-(transform_[3][0]-radius_))>=0.1L)) return;
     gridMinX_=transform_[3][0]-radius_; gridMinY_=transform_[3][1]-radius_;
     gridMaxX_=radius_+transform_[3][0]; gridMaxY_=radius_+transform_[3][1];
     const float width=gridMaxX_-gridMinX_; const long double height=static_cast<long double>(gridMaxY_)-gridMinY_;
