@@ -4,6 +4,7 @@
 #include "fnt.h"
 #include <cstdio>
 #include <cstring>
+#include <cstdint>
 namespace {
 class ProbeFont final:public fntFont {
 public:
@@ -43,9 +44,12 @@ int checkGameplayBindings() {
     ProbeFont font; fntRenderer renderer;
     char setup[1024];
     std::sprintf(setup,
-        "player = '_%lx_Player_p'\nballs = '_%lx_Balls_p'\nrandom = '_%lx_Rnd_p'\nfont = '_%lx_fntFont_p'\nrenderer = '_%lx_fntRenderer_p'\n",
-        reinterpret_cast<unsigned long>(&player),reinterpret_cast<unsigned long>(&balls),
-        reinterpret_cast<unsigned long>(&random),reinterpret_cast<unsigned long>(&font),reinterpret_cast<unsigned long>(&renderer));
+        "player = '_%llx_Player_p'\nballs = '_%llx_Balls_p'\nrandom = '_%llx_Rnd_p'\nfont = '_%llx_fntFont_p'\nrenderer = '_%llx_fntRenderer_p'\n",
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&player)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&balls)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&random)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&font)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&renderer)));
     if (PyRun_SimpleString(setup)) { PyErr_Print(); return 21; }
     const char* checks=
         "p = gamec.new_Point3F(3, 4, 0)\nq = gamec.new_Point3F(1, 0, 0)\n"

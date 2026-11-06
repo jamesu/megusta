@@ -6,7 +6,7 @@ int main() {
     shape.objects.resize(3); shape.assembledMeshes.resize(3);
     for (int i=0;i<3;++i) {
         shape.objects[i].startMeshIndex=i; shape.objects[i].numMeshes=1;
-        shape.assembledMeshes[i].type=0;
+        shape.assembledMeshes[i].type=DTSMeshStandard;
     }
     shape.hasMaterials=true; char materialA[]="a",materialB[]="b";
     shape.materialList.push_back(materialA,0,-1,-1,-1,1,1);

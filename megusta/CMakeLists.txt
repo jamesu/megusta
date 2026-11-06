@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.20)
 project(megusta LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(MEGUSTA_OPENGL_ADAPTER_SOURCES
+  src/engine/opengl_adapter.cpp
+  src/engine/opengl_adapter_fog_methods.cpp
+  src/engine/opengl_adapter_is_enabled.cpp)
 if(WIN32)
   add_compile_definitions(NOMINMAX)
 endif()
@@ -109,14 +113,15 @@ if(WIN32)
     target_compile_definitions(megusta_audio PRIVATE MEGUSTA_AUDIO_DEFAULT_DIRECTSOUND)
     target_link_libraries(megusta_audio PUBLIC megusta_openal_ds)
     add_executable(openal_backend_check tests/openal_backend_check.cpp
-      src/engine/resource_file.cpp src/engine/log_capture.cpp)
+      src/engine/resource_file.cpp src/engine/log_capture.cpp src/engine/string_services.cpp)
     target_link_libraries(openal_backend_check PRIVATE megusta_openal_ds)
     megusta_apply_vc6_x87_model(openal_backend_check)
   endif()
   megusta_apply_vc6_x87_model(megusta_audio)
   # This fixture deliberately compiles the frontend without the default-backend
   # define or any DirectSound library, exercising the replacement boundary.
-  add_executable(openal_external_dispatch_check tests/openal_dispatch_check.cpp src/audio/game_audio.cpp)
+  add_executable(openal_external_dispatch_check tests/openal_dispatch_check.cpp src/audio/game_audio.cpp
+    src/engine/resource_file.cpp src/engine/log_capture.cpp src/engine/string_services.cpp)
   target_include_directories(openal_external_dispatch_check PRIVATE src)
   megusta_apply_vc6_x87_model(openal_external_dispatch_check)
   set(MEGUSTA_DTS_WRAPPER_SOURCES
@@ -141,7 +146,8 @@ if(WIN32)
   add_executable(megusta_dts_prefix_probe tests/dts_prefix_probe.cpp
     src/dts/shape.cpp src/dts/matrix.cpp src/dts/shape_instance.cpp src/dts/sequence.cpp src/dts/thread.cpp src/dts/state_transpose.cpp src/dts/integer_set.cpp src/dts/legacy_alloc.cpp src/dts/vector_storage.cpp src/dts/shared_storage.cpp
     src/dts/legacy_mesh.cpp src/dts/material_list.cpp src/dts/shape_alloc.cpp src/dts/mesh.cpp src/dts/mesh_lifecycle.cpp src/dts/mesh_render.cpp src/dts/shadow_support.cpp src/dts/scratch_storage.cpp src/dts/scratch_release.cpp src/dts/texture_manager.cpp src/dts/graphics_state.cpp src/dts/static_state.cpp src/dts/bitmap_support.cpp
-    src/engine/resource_file.cpp src/engine/log_capture.cpp src/engine/string_services.cpp src/engine/opengl_adapter.cpp)
+    src/engine/resource_file.cpp src/engine/log_capture.cpp src/engine/string_services.cpp
+    ${MEGUSTA_OPENGL_ADAPTER_SOURCES})
   target_include_directories(megusta_dts_prefix_probe PRIVATE src)
   target_sources(megusta_dts_prefix_probe PRIVATE ${MEGUSTA_DTS_WRAPPER_SOURCES})
   target_link_libraries(megusta_dts_prefix_probe PRIVATE opengl32 megusta_png)
@@ -173,11 +179,18 @@ if(WIN32)
     # These fixtures supply selected OpenGLAdapter methods themselves. Other
     # DTS checks use the platform adapter for unexercised render sections that
     # remain linked into shared translation units.
-    if(NOT check_name STREQUAL "dts_fog_render_check" AND
-       NOT check_name STREQUAL "dts_skinning_check")
+    if(check_name STREQUAL "dts_fog_render_check")
+      # This fixture defines the methods it records. Link only the remaining
+      # adapter methods so the test overrides are ordinary definitions.
       target_sources(${check_name} PRIVATE src/engine/opengl_adapter.cpp)
-      target_link_libraries(${check_name} PRIVATE opengl32)
+    elseif(check_name STREQUAL "dts_skinning_check")
+      # The skinning fixture overrides isEnabled; fog_methods contains the
+      # other adapter methods that this test needs.
+      target_sources(${check_name} PRIVATE src/engine/opengl_adapter.cpp src/engine/opengl_adapter_fog_methods.cpp)
+    else()
+      target_sources(${check_name} PRIVATE ${MEGUSTA_OPENGL_ADAPTER_SOURCES})
     endif()
+    target_link_libraries(${check_name} PRIVATE opengl32)
   endforeach()
 endif()
 add_executable(megusta_plib_check tests/plib_core.cpp)
@@ -193,30 +206,46 @@ endif()
 if(MEGUSTA_BUILD_SSG)
   add_executable(megusta_ssg_check tests/plib_scene_graph.cpp)
   target_link_libraries(megusta_ssg_check PRIVATE plib_ssg)
+  target_sources(megusta_ssg_check PRIVATE src/engine/resource_file.cpp src/engine/resource_mount.cpp
+    src/engine/resource_runtime.cpp src/engine/log_capture.cpp src/engine/string_services.cpp
+    src/engine/multi_texture.cpp src/engine/runtime_adapters.cpp
+    src/engine/directory_services.cpp src/engine/mapped_resource_index.cpp)
   add_executable(megusta_serialization_check tests/plib_serialization.cpp)
   target_link_libraries(megusta_serialization_check PRIVATE plib_ssg)
+  target_sources(megusta_serialization_check PRIVATE src/engine/resource_file.cpp src/engine/resource_mount.cpp
+    src/engine/resource_runtime.cpp src/engine/log_capture.cpp src/engine/string_services.cpp
+    src/engine/multi_texture.cpp src/engine/runtime_adapters.cpp
+    src/engine/directory_services.cpp src/engine/mapped_resource_index.cpp)
   add_executable(megusta_state_check tests/plib_states.cpp)
   target_link_libraries(megusta_state_check PRIVATE plib_ssg)
-  add_library(megusta_original_plib_oracle SHARED tests/original_plib_leaf.cpp)
-  target_link_libraries(megusta_original_plib_oracle PRIVATE plib_ssg)
-  if(MEGUSTA_BUILD_PUI)
-    target_link_libraries(megusta_original_plib_oracle PRIVATE plib_pui)
-    target_compile_definitions(megusta_original_plib_oracle PRIVATE MEGUSTA_ORACLE_PUI)
-  endif()
-  if(MEGUSTA_BUILD_NET)
-    target_link_libraries(megusta_original_plib_oracle PRIVATE plib_net)
-    target_compile_definitions(megusta_original_plib_oracle PRIVATE MEGUSTA_ORACLE_NET)
-  endif()
-  set_target_properties(megusta_original_plib_oracle PROPERTIES PREFIX "")
-  if(NOT MSVC)
-    target_link_options(megusta_original_plib_oracle PRIVATE "-Wl,--add-stdcall-alias")
-  endif()
-  add_executable(megusta_original_plib_check tests/original_host.cpp)
-  target_compile_features(megusta_original_plib_check PRIVATE cxx_std_17)
-  if(MSVC)
-    target_link_options(megusta_original_plib_check PRIVATE /BASE:0x10000000)
-  else()
-    target_link_options(megusta_original_plib_check PRIVATE "-Wl,--image-base,0x10000000")
+  target_sources(megusta_state_check PRIVATE src/engine/resource_file.cpp src/engine/resource_mount.cpp
+    src/engine/resource_runtime.cpp src/engine/log_capture.cpp src/engine/string_services.cpp
+    src/engine/multi_texture.cpp src/engine/runtime_adapters.cpp
+    src/engine/directory_services.cpp src/engine/mapped_resource_index.cpp)
+  # The reference oracle mirrors the original 32-bit process layout and has
+  # explicit x86 assembly checks. Do not add unusable oracle targets to x64.
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    add_library(megusta_original_plib_oracle SHARED tests/original_plib_leaf.cpp)
+    target_link_libraries(megusta_original_plib_oracle PRIVATE plib_ssg)
+    if(MEGUSTA_BUILD_PUI)
+      target_link_libraries(megusta_original_plib_oracle PRIVATE plib_pui)
+      target_compile_definitions(megusta_original_plib_oracle PRIVATE MEGUSTA_ORACLE_PUI)
+    endif()
+    if(MEGUSTA_BUILD_NET)
+      target_link_libraries(megusta_original_plib_oracle PRIVATE plib_net)
+      target_compile_definitions(megusta_original_plib_oracle PRIVATE MEGUSTA_ORACLE_NET)
+    endif()
+    set_target_properties(megusta_original_plib_oracle PROPERTIES PREFIX "")
+    if(NOT MSVC)
+      target_link_options(megusta_original_plib_oracle PRIVATE "-Wl,--add-stdcall-alias")
+    endif()
+    add_executable(megusta_original_plib_check tests/original_host.cpp)
+    target_compile_features(megusta_original_plib_check PRIVATE cxx_std_17)
+    if(MSVC)
+      target_link_options(megusta_original_plib_check PRIVATE /BASE:0x10000000)
+    else()
+      target_link_options(megusta_original_plib_check PRIVATE "-Wl,--image-base,0x10000000")
+    endif()
   endif()
   add_executable(megusta_scene_inspect src/apps/scene_inspect.cpp)
   target_link_libraries(megusta_scene_inspect PRIVATE megusta_platform)
@@ -282,8 +311,14 @@ if(MEGUSTA_BUILD_SSG)
   target_sources(megusta_scene_inspect PRIVATE src/game/camera.cpp)
   target_sources(megusta_scene_inspect PRIVATE src/game/camera_control.cpp src/game/camera_heading.cpp src/game/camera_frame.cpp)
   add_executable(camera_control_check tests/camera_control_check.cpp
-    src/game/camera.cpp src/game/camera_control.cpp src/game/camera_heading.cpp)
+    src/game/camera.cpp src/game/camera_control.cpp src/game/camera_heading.cpp
+    src/game/scene_object.cpp src/game/scene_triangle.cpp tests/player_get_ball_fixture.cpp
+    src/game/recovered_binding_primitives.cpp src/engine/math.cpp
+    src/engine/resource_file.cpp src/engine/resource_mount.cpp src/engine/resource_runtime.cpp
+    src/engine/log_capture.cpp src/engine/string_services.cpp src/engine/multi_texture.cpp
+    src/engine/runtime_adapters.cpp src/engine/directory_services.cpp src/engine/mapped_resource_index.cpp)
   target_include_directories(camera_control_check PRIVATE src)
+  target_include_directories(camera_control_check PRIVATE vendor/plib/src/net)
   target_link_libraries(camera_control_check PRIVATE plib_ssg)
   megusta_apply_vc6_x87_model(camera_control_check)
   target_sources(megusta_scene_inspect PRIVATE src/game/game_shape_adapter.cpp src/game/game_shape_runtime.cpp)
@@ -328,7 +363,8 @@ if(MEGUSTA_BUILD_SSG)
   target_sources(megusta_scene_inspect PRIVATE tests/swig_gameplay_check.cpp)
   target_sources(megusta_scene_inspect PRIVATE tests/swig_world_check.cpp)
   target_sources(megusta_scene_inspect PRIVATE src/game/driver_autorun.cpp)
-  target_sources(megusta_scene_inspect PRIVATE src/engine/opengl_adapter.cpp src/engine/gl_primitives.cpp src/engine/gl_token_table.cpp src/game/hole_render_backend.cpp)
+  target_sources(megusta_scene_inspect PRIVATE ${MEGUSTA_OPENGL_ADAPTER_SOURCES}
+    src/engine/gl_primitives.cpp src/engine/gl_token_table.cpp src/game/hole_render_backend.cpp)
   target_sources(megusta_scene_inspect PRIVATE src/game/input.cpp)
   target_sources(megusta_scene_inspect PRIVATE src/game/scene_grid.cpp src/game/triangle_distance.cpp src/game/geometry_queries.cpp)
   target_sources(megusta_scene_inspect PRIVATE src/game/game_config_messages.cpp)
@@ -417,7 +453,9 @@ if(WIN32 AND TARGET megusta_scene_inspect)
   add_executable(megusta_library_link_check tests/library_link_check.cpp)
   target_sources(megusta_library_link_check PRIVATE
     src/engine/resource_file.cpp src/engine/log_capture.cpp
-    src/engine/string_services.cpp)
+    src/engine/string_services.cpp src/engine/multi_texture.cpp
+    src/engine/runtime_adapters.cpp src/engine/resource_mount.cpp
+    src/engine/mapped_resource_index.cpp)
   if(MSVC)
     target_link_options(megusta_library_link_check PRIVATE /OPT:NOREF "/MAP:${CMAKE_CURRENT_BINARY_DIR}/megusta_library_link_check.map")
   else()

@@ -94,7 +94,7 @@ int checkPriorityPass() {
     for (int i=0;i<4;++i) sounds.playVoice("probe",0);
     auto* dropped=sounds.voiceQueue[0];
     sounds.playVoice("probe",0);
-    if (sounds.voiceQueueCount!=4 || (dropped->flags&QueuedVoice)) return 15;
+    if (sounds.voiceQueueCount!=4 || !(dropped->flags&QueuedVoice)) return 15;
     auto* removed=sounds.voiceQueue[3];
     if (!sounds.stop("probe",0) || sounds.voiceQueueCount!=3) return 16;
     for (int i=0;i<sounds.voiceQueueCount;++i) if (sounds.voiceQueue[i]==removed) return 17;

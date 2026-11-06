@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <cstdint>
 int checkGameplayBindings();
 int checkWorldBindings();
 int checkNetworkBindings() {
@@ -31,8 +32,9 @@ int checkNetworkBindings() {
     megusta::iRoom room;
     std::strcpy(room.name,"binding-room"); room.num_games=7;
     char setup[512];
-    std::sprintf(setup,"import netc\nr = '_%lx_iRoom_p'\na = '_%lx_class_iRoom_p'\n",
-        reinterpret_cast<unsigned long>(&room),reinterpret_cast<unsigned long>(&room));
+    std::sprintf(setup,"import netc\nr = '_%llx_iRoom_p'\na = '_%llx_class_iRoom_p'\n",
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&room)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&room)));
     if (PyRun_SimpleString(setup)) { PyErr_Print(); return 3; }
     const char* checks=
         "assert netc.iRoom_getName(r) == 'binding-room'\n"
@@ -57,7 +59,8 @@ int checkNetworkBindings() {
         PyErr_Clear(); ++gameCount;
     }
     megusta::Effect effect(2.0f); // Unregistered native constructor needs no global runtime.
-    std::sprintf(setup,"import gamec\ne = '_%lx_Effect_p'\n",reinterpret_cast<unsigned long>(&effect));
+    std::sprintf(setup,"import gamec\ne = '_%llx_Effect_p'\n",
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&effect)));
     if (PyRun_SimpleString(setup)) { PyErr_Print(); return 7; }
     const char* effectChecks=
         "assert gamec.Effect_setPosition(e, 1, 2, 3) is None\n"
@@ -84,12 +87,13 @@ int checkNetworkBindings() {
     megusta::TasksManager manager{};
     megusta::TaskRuntime runtime{nullptr,manager,
         [](void*)->megusta::Ball* { return nullptr; },
-        [](void*,megusta::Ball*)->std::uint32_t { return 0; },
+        [](void*,megusta::Ball*)->std::uintptr_t { return 0; },
         [](void*){},megusta::invokePythonTaskCallback,megusta::releasePythonTaskCallback};
     manager.clear(runtime);
     megusta::bindings::bindConfigTaskServices(nullptr,&runtime);
-    std::sprintf(setup,"c = '_%lx_GameConfig_p'\nts = '_%lx_Tasks_p'\n",
-        reinterpret_cast<unsigned long>(&config),reinterpret_cast<unsigned long>(&manager));
+    std::sprintf(setup,"c = '_%llx_GameConfig_p'\nts = '_%llx_Tasks_p'\n",
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&config)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&manager)));
     if (PyRun_SimpleString(setup)) { PyErr_Print(); return 11; }
     const char* configChecks=
         "assert gamec.GameConfig_readSections(c) == []\n"

@@ -7,6 +7,7 @@
 #include "ssgGameAnimation.h"
 #include <cstdio>
 #include <cstring>
+#include <cstdint>
 int checkWorldBindings() {
     int count=0;
     PyMethodDef* tables[]={megusta::bindings::ssgBindingMethods(),megusta::bindings::objectPlayerMethods(),megusta::bindings::cameraPutterDriverMethods()};
@@ -33,12 +34,17 @@ int checkWorldBindings() {
     megusta::Driver driver{}; std::strcpy(driver.activeScript,"test-module");
     char setup[1536];
     std::sprintf(setup,
-        "root = '_%lx_ssgEntity_p'\ntr = '_%lx_ssgTransform_p'\nan = '_%lx_ssgAnim_p'\nobj = '_%lx_Object_p'\nfriend = '_%lx_Object_p'\nobjects = '_%lx_Objects_p'\nplayers = '_%lx_Players_p'\ncam = '_%lx_Camera_p'\nputter = '_%lx_Putter_p'\ndriver = '_%lx_Driver_p'\n",
-        reinterpret_cast<unsigned long>(&root),reinterpret_cast<unsigned long>(transform),
-        reinterpret_cast<unsigned long>(animation),reinterpret_cast<unsigned long>(&object[1]),
-        reinterpret_cast<unsigned long>(&object[2]),reinterpret_cast<unsigned long>(&objects),
-        reinterpret_cast<unsigned long>(&players),reinterpret_cast<unsigned long>(&camera),
-        reinterpret_cast<unsigned long>(&putter),reinterpret_cast<unsigned long>(&driver));
+        "root = '_%llx_ssgEntity_p'\ntr = '_%llx_ssgTransform_p'\nan = '_%llx_ssgAnim_p'\nobj = '_%llx_Object_p'\nfriend = '_%llx_Object_p'\nobjects = '_%llx_Objects_p'\nplayers = '_%llx_Players_p'\ncam = '_%llx_Camera_p'\nputter = '_%llx_Putter_p'\ndriver = '_%llx_Driver_p'\n",
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&root)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(transform)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(animation)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&object[1])),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&object[2])),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&objects)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&players)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&camera)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&putter)),
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&driver)));
     if (PyRun_SimpleString(setup)) { PyErr_Print(); return 31; }
     const char* checks=
         "assert gamec.puttmap_dbase_isCreating() == 0\n"

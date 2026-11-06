@@ -7,7 +7,7 @@ static void check(bool ok,const char* message){if(!ok){++failures;std::fprintf(s
 static void clicked(puObject*){++callbacks;active_during_callback=puActiveWidget();}
 static void down(puObject*){++downcallbacks;}
 int main(){
-    static_assert(sizeof(puFont)==12,"FNT-only font configuration");
+    static_assert(sizeof(puFont)==(sizeof(void*)==4 ? 12 : 16),"FNT-only font configuration");
     puSetWindowSize(640,480);
     check(puGetWindowWidth()==640 && puGetWindowHeight()==480,"explicit viewport before window attachment");
     puValue value;int iv=42;value.setValuator(&iv);

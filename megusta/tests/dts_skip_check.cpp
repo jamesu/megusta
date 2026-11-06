@@ -16,10 +16,10 @@ int main() {
     assert(rawObject==object && rawDecal==static_cast<unsigned>(decal));
     object=decal=0; assert(shape.checkSkip(0,object,decal,0,skip) && !skip);
     assert(!shape.checkSkip(0,object,decal,2,skip));
-    shape.assembledMeshes.resize(8); for (auto& mesh:shape.assembledMeshes) mesh.type=0;
+    shape.assembledMeshes.resize(8); for (auto& mesh:shape.assembledMeshes) mesh.type=DTSMeshStandard;
     shape.smallestVisibleDetail=1; shape.details[0].subShape=0; shape.details[0].objectDetail=0;
     shape.detailFirstSkin={0,2}; shape.detailNumSkins={2,1};
-    shape.assembledSkins.resize(3); for (auto& skin:shape.assembledSkins) skin.type=1;
+    shape.assembledSkins.resize(3); for (auto& skin:shape.assembledSkins) skin.type=DTSMeshSkin;
     assert(shape.applyDetailSkip(1));
     for (int i=0;i<8;++i) assert((shape.assembledMeshes[i].type==4)==expected[i]);
     assert(shape.details[0].subShape==1 && shape.details[0].objectDetail==1);

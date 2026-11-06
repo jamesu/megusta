@@ -45,27 +45,27 @@ int main() {
     assert(allocator.copyToShape32(2,true)==words && allocator.size==0);
     assert(allocator.buffer32==reinterpret_cast<const std::uint8_t*>(words+2));
     DTSAssembledMesh noMesh; context.currentMesh=&noMesh;
-    assert(TSMesh::assembleMesh(4,1)==nullptr && context.succeeded && allocator.multiplier==1);
-    assert(TSMesh::assembleMesh(9,0)==nullptr && !context.succeeded);
+    assert(TSMesh::assembleMesh(DTSMeshNull,1)==nullptr && context.succeeded && allocator.multiplier==1);
+    assert(TSMesh::assembleMesh(static_cast<DTSMeshKind>(9),0)==nullptr && !context.succeeded);
     std::uint32_t meshWords[]={0,1,1,0xffffffffu, 0,0,0,0,0,0,0,0,0, 1,
                                0,0,1,0x40000001u,4,0,0,0,1};
     std::uint16_t meshHalves[]={0,0,4,0,1,2,3,1}; std::uint8_t meshBytes[]={0,1};
     std::vector<TSMesh> priorMeshes; std::vector<TSSkinMesh> priorSkins;
-    DTSAssembledMesh converted; converted.type=0;
+    DTSAssembledMesh converted; converted.type=DTSMeshStandard;
     allocator.setRead(meshWords,meshHalves,meshBytes,1);
     context.currentMesh=&converted; context.previousMeshes=&priorMeshes; context.previousSkins=&priorSkins;
     context.convertTriangles=true;
-    assert(TSMesh::assembleMesh(0,0)==&converted.base && context.succeeded && !allocator.guardMismatch);
+    assert(TSMesh::assembleMesh(DTSMeshStandard,0)==&converted.base && context.succeeded && !allocator.guardMismatch);
     assert(converted.base.primitives.size()==1 && converted.base.primitives[0].count==6 && converted.base.indices.size()==6);
     assert(allocator.size==128+20); allocator.doAlloc(); auto* meshBlock=allocator.destination;
     allocator.setRead(meshWords,meshHalves,meshBytes,0);
-    assert(TSMesh::assembleMesh(0,0)==&converted.base && context.succeeded && allocator.size==128+20);
+    assert(TSMesh::assembleMesh(DTSMeshStandard,0)==&converted.base && context.succeeded && allocator.size==128+20);
     auto* arenaPrimitive=reinterpret_cast<TSDrawPrimitive*>(meshBlock+128);
     auto* arenaIndices=reinterpret_cast<std::uint16_t*>(meshBlock+128+8);
     assert(arenaPrimitive->count==6 && arenaIndices[0]==0 && arenaIndices[5]==3);
     ::operator delete(meshBlock);
     allocator.setRead(meshWords,meshHalves,meshBytes,true);
-    assert(TSMesh::assembleMesh(0,1)==&converted.base && context.succeeded);
+    assert(TSMesh::assembleMesh(DTSMeshStandard,1)==&converted.base && context.succeeded);
     assert(allocator.size==128 && !allocator.guardMismatch && allocator.multiplier==1);
     // Sorted meshes force multiple-strip conversion even if the caller has
     // selected the normalized pass-through mode.
@@ -73,18 +73,18 @@ int main() {
     sortedWords.insert(sortedWords.end(),{0,0,0,0,0,0,2});
     std::uint16_t sortedHalves[]={0,0,4,0,1,2,3,1,2};
     std::uint8_t sortedBytes[]={0,1,2};
-    DTSAssembledMesh sorted; sorted.type=3; context.currentMesh=&sorted;
+    DTSAssembledMesh sorted; sorted.type=DTSMeshSorted; context.currentMesh=&sorted;
     context.convertTriangles=false; context.minimumStripTriangles=-1;
     minimumStripTriangles=3;
     allocator.setRead(sortedWords.data(),sortedHalves,sortedBytes,true);
-    assert(TSMesh::assembleMesh(3,0)==&sorted.sorted && context.succeeded && !allocator.guardMismatch);
+    assert(TSMesh::assembleMesh(DTSMeshSorted,0)==&sorted.sorted && context.succeeded && !allocator.guardMismatch);
     assert(sorted.sorted.primitives.size()==1 && sorted.sorted.primitives[0].count==6 && sorted.sorted.indices.size()==6);
     // With no explicit mode, base assembly likewise selects multiple strips
     // using the process-wide threshold instead of passing input through.
     dtsPrimitiveModes[3]=0;
-    DTSAssembledMesh regular; regular.type=0; context.currentMesh=&regular;
+    DTSAssembledMesh regular; regular.type=DTSMeshStandard; context.currentMesh=&regular;
     allocator.setRead(meshWords,meshHalves,meshBytes,true);
-    assert(TSMesh::assembleMesh(0,0)==&regular.base && context.succeeded && !allocator.guardMismatch);
+    assert(TSMesh::assembleMesh(DTSMeshStandard,0)==&regular.base && context.succeeded && !allocator.guardMismatch);
     assert(regular.base.primitives.size()==1 && regular.base.primitives[0].count==6 && regular.base.indices.size()==6);
     minimumStripTriangles=0;
     activeMeshAssembly=nullptr;

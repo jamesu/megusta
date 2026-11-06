@@ -19,7 +19,7 @@ int main() {
     shape.hasMaterials=true;
     shape.objects[0].startMeshIndex=0; shape.objects[0].numMeshes=1;
     shape.objects[1].startMeshIndex=1; shape.objects[1].numMeshes=1;
-    shape.assembledMeshes.resize(2); shape.assembledMeshes[0].type=0; shape.assembledMeshes[1].type=4;
+    shape.assembledMeshes.resize(2); shape.assembledMeshes[0].type=DTSMeshStandard; shape.assembledMeshes[1].type=DTSMeshNull;
     shape.assembledMeshes[0].base.primitives={{0,6,0},{0,5,0x40000000u}};
     shape.details.resize(2); shape.details[0].subShape=0; shape.details[0].objectDetail=0;
     shape.details[1].subShape=-1; shape.details[1].polyCount=37;

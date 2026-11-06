@@ -43,7 +43,7 @@ int main() {
     assert(large.primitives[0].count==2 && large.primitives[1].start==2);
     // Sorted meshes force the multiple-strip path even when triangles are requested.
     TSShape shape; shape.assembledMeshes.resize(1); auto& sorted=shape.assembledMeshes[0];
-    sorted.type=3; sorted.sorted.indices={0,1,2,3};
+    sorted.type=DTSMeshSorted; sorted.sorted.indices={0,1,2,3};
     sorted.sorted.primitives={{0,4,0x40000001u}};
     minimumStripTriangles=0;
     assert(shape.convertMeshesToTriangles());

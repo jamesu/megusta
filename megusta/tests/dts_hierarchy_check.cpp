@@ -11,7 +11,7 @@ int main() {
     shape.objects.resize(3);
     shape.objects[0].nodeIndex=1; shape.objects[1].nodeIndex=1; shape.objects[2].nodeIndex=0;
     shape.decals.resize(2); shape.decals[0].objectIndex=1; shape.decals[1].objectIndex=1;
-    shape.assembledMeshes.resize(2); shape.assembledMeshes[0].type=2; shape.assembledMeshes[1].type=2;
+    shape.assembledMeshes.resize(2); shape.assembledMeshes[0].type=DTSMeshDecal; shape.assembledMeshes[1].type=DTSMeshDecal;
     shape.assembledMeshes[1].decal.texgenS.resize(1); shape.decals[0].startMeshIndex=0; shape.decals[0].numMeshes=2;
     assert(shape.initializeHierarchy());
     assert(shape.nodes[0].firstChild==1 && shape.nodes[1].nextSibling==2 && shape.nodes[2].nextSibling==-1);

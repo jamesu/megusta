@@ -1,6 +1,8 @@
 #include "audio/openal.h"
+#include "engine/resource_runtime.h"
 #include <cassert>
 using namespace megusta::audio;
+namespace megusta { SharedIoServices* sharedIo=nullptr; }
 static int calls,initialBits,lastToken,shutdownCalls;
 static float lastValue;
 static void initializeBackend(int bits) { ++calls;initialBits=bits; }

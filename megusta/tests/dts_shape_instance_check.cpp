@@ -33,7 +33,7 @@ int main() {
     shape.firstObjects={0}; shape.numObjects={1};
     shape.firstDecals={0}; shape.numDecals={1};
     shape.detailFirstSkin={0}; shape.detailNumSkins={0};
-    shape.assembledMeshes.resize(2); shape.assembledMeshes[0].type=0; shape.assembledMeshes[1].type=2;
+    shape.assembledMeshes.resize(2); shape.assembledMeshes[0].type=DTSMeshStandard; shape.assembledMeshes[1].type=DTSMeshDecal;
     shape.objectStates.push_back({0.75f,2,3}); shape.decalStates.push_back(4);
     shape.firstNodes.push_back(0); shape.numNodes.push_back(1);
     shape.details.push_back({0,0,0,0.0f}); shape.iflMaterials.resize(1);
@@ -48,12 +48,12 @@ int main() {
     assert(instance.nodeTransforms[0].values[0]==1 && instance.nodeTransforms[0].values[3]==1 && instance.nodeTransforms[0].values[11]==3);
     assert(instance.materialList==&shape.materialList && std::string(shape.materialList.materialNames[0])=="skins/example");
     assert(!instance.alphaIsReflectanceMap);
-    shape.assembledMeshes[0].type=1;
+    shape.assembledMeshes[0].type=DTSMeshSkin;
     {
         TSShapeInstance skinTargetInstance(&shape,0);
         assert(shape.assembledMeshes[1].decal.targetMesh==&shape.assembledMeshes[0].skin);
     }
-    shape.assembledMeshes[0].type=0;
+    shape.assembledMeshes[0].type=DTSMeshStandard;
     instance.materialList=new TSMaterialList();
     instance.ownsMaterialList=true;
     instance.setMaterialList(nullptr);
@@ -74,7 +74,7 @@ int main() {
     detailShape.details[0].objectDetail=0;
     detailShape.detailFirstSkin={0}; detailShape.detailNumSkins={0};
     detailShape.assembledMeshes.resize(1);
-    detailShape.assembledMeshes[0].type=0;
+    detailShape.assembledMeshes[0].type=DTSMeshStandard;
     detailShape.assembledMeshes[0].base.primitives={{0,3,0}};
     char detailName[]="detail";
     detailShape.materialList.push_back(detailName,0,-1,-1,7,1,1);
