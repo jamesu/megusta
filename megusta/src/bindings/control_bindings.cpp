@@ -89,8 +89,8 @@ SWIG_BEGIN(Putter,forcePutt,"sf",float value,&value)
     auto& animation=services->putterAnimation;
     animation.player=gamePlayers.currentPlayer; animation.tick=services->fixedTick; animation.editing=editing();
     const auto& bound=services->strike;
-    PutterStrikeServices strike{*gamePlayers.currentPlayer,gameBalls,gameplayServices()->ball,bound.context,
-        bound.waitForRemoteTurn,bound.remoteVector,bound.sendPutt,bound.enterCameraFollow};
+    PutterStrikeServices strike{*gamePlayers.currentPlayer,gameBalls,gameplayServices()->ball,
+        bound.client,bound.camera,bound.cameraRuntime};
     p->forcePutt(value,animation,strike,services->tuning,services->cameraHeading); return none(); }
 SETINT(Putter,showPowerBar,p->powerBarVisible=value!=0)
 INTEGER(Putter,isAiming,p->state==1)

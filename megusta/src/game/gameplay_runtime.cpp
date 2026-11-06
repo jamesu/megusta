@@ -25,7 +25,6 @@ void ballImpact(void* p,const float* position) { auto& r=runtime(p); r.host.play
 void objectImpact(void* p,SceneObjectRecord& object,const float* position,const float* normal) {
     auto& r=runtime(p); r.host.playObjectImpact(r.host.context,object,position,normal);
 }
-void terminalEvent(void* p) { auto& r=runtime(p); r.players.dispatchTerminalEvent(r.balls,r.tasks,r.gameplay); }
 bool currentPlayerBall(void* p,const Ball& ball) {
     auto& r=runtime(p); return r.players.currentPlayer && r.players.currentPlayer==playerByIndex(p,ball.playerIndex);
 }
@@ -43,7 +42,7 @@ GameplayRuntime::GameplayRuntime(PlayersManager& playerManager,BallsManager& bal
       restContext{objects,grid,collision,this,strokeAndPenaltyCount,fatalHistory},rest(makeBallRestServices(restContext)),
       gameplay{this,playerByIndex,currentPlayer,restoreHeading,recordStroke,strikeSound,timeMilliseconds,serviceNetworkEnd},
       physics{objects,grid,collision,rest,host.acceleration,host.overlapRecovery,host.slowRecovery,host.fastRecovery,
-              this,ballImpact,objectImpact,terminalEvent} {}
+              players,balls,tasks,gameplay,this,ballImpact,objectImpact} {}
 void GameplayRuntime::stepBalls() {
     BallsStepServices services{physics,tasks,players.playerCount,this,collisionRandom,currentPlayerBall,targetStrokeCount};
     balls.stepPhysics(services);

@@ -8,6 +8,7 @@
 #include "engine/opengl_adapter.h"
 #include "engine/string_services.h"
 #include "engine/runtime_adapters.h"
+#include "engine/movie_playback.h"
 #include "ssg.h"
 #include "fnt.h"
 #include "pu.h"
@@ -142,16 +143,17 @@ int guiSystem::shellCmd(const char* command,int a,int b,int c,int d,int e) {
         delete guiFonts.slots[a]; guiFonts.slots[a]=new fntTexFont;
         char path[128]; std::sprintf(path,"data/fonts/%s",command+8);
         if (!guiFonts.slots[a]->load(path,b?GL_LINEAR:GL_NEAREST,b?GL_LINEAR:GL_LINEAR_MIPMAP_LINEAR)) std::abort();
-    } else if (prefix("PlayIntro:",10)) guiRuntime->shellActions->playMovie(guiRuntime->shellActions->context,command+10,0,0,0,0,0);
+    } else if (prefix("PlayIntro:",10)) engine_movie::playMovie(command+10,0,0,0,0,0);
     else if (prefix("PlayMovie:",10)) {
         char path[128]; std::sprintf(path,"movies/%s",command+10);
-        guiRuntime->shellActions->playMovie(guiRuntime->shellActions->context,path,a,b,c,d,e);
+        engine_movie::playMovie(path,static_cast<unsigned>(a),b,c,d,e);
     } else if (is("Credits") || prefix("MountRBX:",9)) { /* These two original branches have no operation. */ }
     else if (is("FinishDlg")) {
         for (int i=0;i<elementCount;++i) if (elements[i]->type==0) {
             auto* group=static_cast<puGroup*>(elements[i]->widget); group->close(); group->reveal(); return 1;
         }
-    } else if (is("AutoPlay")) guiRuntime->shellActions->configureAutorun(guiRuntime->shellActions->context,a,b,c);
+    } else if (is("AutoPlay"))
+        guiRuntime->scriptServices->autorun.configure(a,b,c!=0,guiRuntime->scriptServices->autorunServices);
     else if (is("MinigolfConfig.exe")) {
         const char* arguments[3]={nullptr,"-computedefaults","-passthru"};
         launchConfigurationTool(arguments[a]);

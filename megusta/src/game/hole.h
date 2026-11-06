@@ -4,6 +4,27 @@
 #include "input.h"
 namespace megusta {
 class PuttMapRuntime;
+class iRoomClient;
+class PuttGuide;
+class Camera;
+class Putter;
+class PowerUps;
+class Effects;
+class Sounds;
+class SpatialObjects;
+class SpatialEditor;
+class WireDebugState;
+struct CameraRuntime;
+struct CameraServices;
+struct CameraFrameServices;
+struct BallsRenderState;
+struct SceneRoots;
+struct SceneObjectAnimationServices;
+struct PutterResourceServices;
+struct SpatialDebugServices;
+struct PutterTuning;
+class BallsManager;
+struct WireDebugServices;
 struct HoleFrameClock {
     std::uint32_t transitionStartTick,transitionDurationTicks,fixedTicksThisFrame;
     float framesPerSecond;
@@ -14,18 +35,6 @@ struct HoleFrameClock {
     void sampleFrameRates(std::uint32_t now);
     void resetFrameDeadline(std::uint32_t now);
     bool advanceFixedTick(std::uint32_t now);
-};
-enum class HoleAction {
-    releasePuttMap,saveSpatialObjects,releaseCamera,releaseBallModels,releasePutter,
-    releaseTransientSounds,releaseEffects,serviceNetwork,releasePowerUps,
-    initializeSceneRoot,buildSceneObjects,loadBallModels,loadPutter,
-    initializeCamera,initializeEffects,initializeWireDebug,loadPowerUps,loadSpatialObjects,
-    loadPuttMapBinary,loadPuttMapScript,putterInput,wireInput,powerUpInput,cameraInput,
-    spatialEditorInput,advancePutter,updateEffects,processPickups,applyCameraInput,
-    drawBalls,updateCameraFollow,drawAimPreview,collectWireCandidates,drawCharacterPass1,
-    drawSceneRoot,drawGroundShadows,drawCharacterPass2,drawSpatialDebug,advancePowerAnimations,
-    drawLensEffects,drawCameraMarker,drawCharacterOcclusion,drawPowerHud,drawPlayersOverlay,
-    drawPowerEditorPosition,drawEffects,drawSelectedSpatialDebug
 };
 // Arguments to the render callbacks are the recovered engine adapter tokens,
 // which the eventual GL backend resolves to platform API values.
@@ -53,17 +62,44 @@ struct HoleRenderServices {
     void (*ortho)(void*,double,double,double,double,double,double);
 };
 struct HoleServices {
+    HoleFrameClock& clock;
     GameplayRuntime& runtime;
     PuttMapRuntime& puttMap;
     const char* currentScriptName;
     GameInputFrame& input;
     InputState& inputState;
     const float* smoothedAim;
+    PuttGuide& guide;
+    int& aimGuideLength;
+    PutterTuning& putterTuning;
+    float& remotePowerThreshold;
+    bool& hasTabElements;
+    Camera& camera;
+    CameraRuntime& cameraRuntime;
+    const CameraServices& cameraServices;
+    CameraFrameServices& cameraFrame;
+    std::uint32_t& cursorTexture;
+    BallsRenderState& ballRendering;
+    BallsManager& balls;
+    Putter& putter;
+    PutterResourceServices& putterResources;
+    int& displayWidth;
+    int& displayHeight;
+    Effects& effects;
+    PowerUps& powers;
+    Sounds& sounds;
+    SpatialObjects& spatialObjects;
+    SpatialDebugServices& spatialDebugServices;
+    WireDebugState& wire;
+    WireDebugServices& wireServices;
+    SpatialEditor& spatialEditor;
+    int& editorMode;
+    int& spatialEditorMoveStep;
+    iRoomClient*& client;
+    SceneRoots& sceneRoots;
+    SceneObjectAnimationServices& animation;
     void* context;
-    void (*action)(void*,HoleAction);
     void (*setAmbientColour)(void*,float,float,float);
-    bool (*isEditing)(void*);
-    bool (*canAdvanceSimulation)(void*);
     GameConfigRuntime& config;
     HoleRenderServices& render;
 };

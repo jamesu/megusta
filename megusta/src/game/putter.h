@@ -7,12 +7,18 @@ class PlayersManager;
 class BallsManager;
 class Random;
 class PuttMapRuntime;
+class iRoomClient;
 class PuttGuide;
+class Camera;
+class Sounds;
 class SceneGridIndex;
 class BallCollisionWorkspace;
 struct SceneObjectCollection;
 struct SceneObjectRecord;
 struct PlayerServices;
+struct CameraRuntime;
+struct CameraFrameServices;
+struct GameInputFrame;
 struct ShapeAnimationServices;
 struct PutterAnimationServices;
 struct Point3F;
@@ -25,23 +31,17 @@ struct PutterAimServices {
     SceneObjectCollection& objects;
     SceneGridIndex& grid;
     BallCollisionWorkspace& collision;
-    void* context;
     float cameraHeading;
     int guideLengthScale;
-    void (*serviceNetworkEnd)(void*);
-    bool (*waitForRemoteTurn)(void*);
-    bool (*canAdvanceSimulation)(void*);
-    void (*sendAimVector)(void*,const Point3F&);
+    iRoomClient* client;
 };
 struct PutterStrikeServices {
     Player& player;
     BallsManager& balls;
     const BallGameplayServices& gameplay;
-    void* context;
-    bool (*waitForRemoteTurn)(void*);
-    void (*remoteVector)(void*,Point3F&);
-    void (*sendPutt)(void*,float,const Point3F&);
-    void (*enterCameraFollow)(void*);
+    iRoomClient* client;
+    Camera& camera;
+    CameraRuntime& cameraRuntime;
 };
 struct PutterAutomatedServices {
     PlayersManager& players;
@@ -51,15 +51,13 @@ struct PutterAutomatedServices {
     Random& animationRandom;
     const ShapeAnimationServices& shape;
     PutterAnimationServices& animation;
-    void* context;
     std::uint32_t fixedTick,taskTick,inputButtons;
     bool cameraControlMode,networkInGame;
     float& cameraHeading;
     float remotePowerThreshold;
-    bool (*waitForRemoteTurn)(void*);
-    bool (*turnStateReady)(void*);
-    void (*stopControlCamera)(void*);
-    void (*fatal)(void*);
+    iRoomClient* client;
+    Camera& camera;
+    CameraRuntime& cameraRuntime;
 };
 struct PutterTuning { float powerCurveQuadratic,powerCurveOffset; int debugValue; };
 long double evaluatePutterPowerCurve(float value,const PutterTuning&);
@@ -67,14 +65,8 @@ struct PutterDrawServices {
     Player& player;
     SceneGridIndex& grid;
     SceneObjectCollection& objects;
-    void* context;
-    void (*drawPreview)(void*,Player&);
-    void (*drawShadow)(void*,Player&);
-    void (*drawOcclusion)(void*,Player&,bool,float);
-    void (*serviceNetworkEnd)(void*);
+    const float* cameraView;
 };
-enum class PutterEffectScalar { rate,duration,scale,friction,ramp };
-enum class PutterEffectVector { direction,dispersion,gravity,volume };
 struct PutterResourceServices {
     PuttGuide& guide;
     ssgBranch* sceneRoot;
@@ -84,24 +76,17 @@ struct PutterResourceServices {
     int screenWidth;
     void* (*loadAtlas)(void*,const char*,bool,int,int,int,int);
     int (*atlasTextureCount)(void*,void*);
-    void (*preloadSound)(void*,const char*,int);
-    void* (*createEffect)(void*);
-    void (*setEffectTexture)(void*,void*,const char*);
-    void (*setEffectPosition)(void*,void*,float,float,float,float);
-    void (*setEffectScalar)(void*,void*,PutterEffectScalar,float);
-    void (*setEffectVector)(void*,void*,PutterEffectVector,float,float,float);
-    void (*warmupEffect)(void*,void*,int);
+    Sounds& sounds;
     void (*fatal)(void*);
 };
 struct PutterAnimationServices {
     Player* player;
     Random& random;
     const ShapeAnimationServices& shape;
-    void* context;
+    Sounds& sounds;
     std::uint32_t tick;
     bool editing;
     const char* const* voiceSuffixes;
-    void (*playVoice)(void*,const char*,int);
 };
 struct PutterHumanInputServices {
     PlayersManager& players;
@@ -113,7 +98,6 @@ struct PutterHumanInputServices {
     SceneObjectCollection& objects;
     SceneGridIndex& grid;
     BallCollisionWorkspace& collision;
-    void* context;
     std::uint32_t tick;
     std::uint32_t& buttons;
     std::uint32_t previousButtons;
@@ -121,9 +105,10 @@ struct PutterHumanInputServices {
     int guideLengthScale;
     float cameraHeading,remotePowerThreshold;
     float joystickAxis3;
-    bool waitingForRemote,turnReady;
-    bool (*stopControlCamera)(void*);
-    void (*playSound)(void*,const char*,int);
+    iRoomClient* client;
+    Camera& camera;
+    CameraRuntime& cameraRuntime;
+    Sounds& sounds;
 };
 struct PutterControlServices {
     Player& player;
@@ -135,19 +120,12 @@ struct PutterControlServices {
     PutterHumanInputServices& humanInput;
     PutterAutomatedServices& automatedInput;
     const PutterStrikeServices& strike;
-    void* context;
-    bool active,hasTabElements,waitingForRemote;
+    PlayersManager& players;
+    const PlayerServices& playerServices;
+    Sounds& sounds;
+    bool& hasTabElements;
     std::uint32_t modifiers,keyCode,fixedTick;
     float cameraHeading;
-    void (*showPowerCurve)(void*);
-    void (*handleMode)(void*,int);
-    void (*updateMode)(void*,int);
-    void (*advanceEffect)(void*);
-    void (*stopEffect)(void*);
-    void (*warmupEffect)(void*,int);
-    void (*startEffect)(void*);
-    void (*playSound)(void*,const char*,int);
-    void (*fatal)(void*);
 };
 class Putter {
 public:
@@ -186,7 +164,8 @@ public:
     bool isTurnSettled(const Player& player,BallsManager& balls) const;
     void captureInputAnchor(bool waitingForRemote,bool human,int mouseX,int mouseY);
     void beginTurn(Player& player,Random& random,std::uint32_t tick,std::uint32_t taskTick,
-                   PutterAnimationServices& animation,void* context,void (*captureAnchor)(void*),void (*resetCamera)(void*));
+                   PutterAnimationServices& animation,GameInputFrame& input,iRoomClient* client,
+                   Camera& camera,CameraFrameServices& cameraFrame);
     void setAimTargetWhileReady(const float* target);
     void enterFollowThrough(float newPower,void* context,void (*enterCameraFollow)(void*));
     void dispatchInput(PutterControlServices& services);
@@ -202,12 +181,12 @@ public:
     void strikeBall(float speed,const PutterStrikeServices& services);
     void handleAutomatedInput(PutterAutomatedServices& services);
     void setAnimation(int animation,PutterAnimationServices& services);
-    void releaseHoleResources(void* context,void (*destroyAtlas)(void*),void (*releaseEffect)(void*,void*));
+    void releaseHoleResources();
     void loadHoleResources(PutterResourceServices& services);
     void drawCharacterPass1(PutterDrawServices& services);
     void drawCharacterPass2(PutterDrawServices& services);
     void drawCharacterOcclusionPass(PutterDrawServices& services);
     void drawAimPreview(PutterAimServices& services);
 };
-void showPutterPowerCurve(const PutterTuning&,void* context,void (*showMessage)(void*,const char*,int));
+void showPutterPowerCurve(const PutterTuning&,PlayersManager&,std::uint32_t tick);
 }

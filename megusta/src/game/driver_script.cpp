@@ -4,6 +4,11 @@
 #include "Python.h"
 #include "python/runtime_setup.h"
 #include "sounds.h"
+#include "room_client.h"
+#include "gui.h"
+#include "scene_runtime.h"
+#include "ssg.h"
+#include "pu.h"
 #include "bindings/game_basic.h"
 #include "bindings/network.h"
 #include "bindings/swig_runtime.h"
@@ -24,21 +29,20 @@ void Driver::reloadScript(DriverScriptServices& services) { changeScript(lastScr
 void Driver::applyPendingScript(DriverScriptServices& s) {
     if (!pendingScript[0]) return;
     const bool testMode=std::getenv("MEGUSTA_TEST_LEVEL") || std::getenv("MEGUSTA_TEST_MENU");
-    auto action=[&](DriverScriptAction a) { s.action(s.context,a); };
-    if (s.sounds) s.sounds->stopNonStreaming(); else action(DriverScriptAction::stopNonStreamingSounds);
-    action(DriverScriptAction::serviceNetwork);
-    if (s.sounds) s.sounds->unloadGroup(2); else action(DriverScriptAction::unloadGuiSoundGroup);
+    s.sounds.stopNonStreaming();
+    networkServiceEnd();
+    s.sounds.unloadGroup(2);
     auto& runtime=s.holeServices.runtime;
     runtime.tasks.scheduledTasks.clear(runtime.tasks);
     Py_Finalize(); Py_Finalize();
     gameHole.releaseResources(s.holeServices);
-    action(DriverScriptAction::clearGuiScreen); action(DriverScriptAction::clearNetworkUiCallbacks);
-    action(DriverScriptAction::serviceNetwork); action(DriverScriptAction::cleanupWidgets);
-    action(DriverScriptAction::applyDefaultSceneState);
-    action(DriverScriptAction::clearSceneRoots);
-    action(DriverScriptAction::resetGameBindings);
-    action(DriverScriptAction::resetNetworkBindings);
-    configureGamePython(); Py_Initialize(); installMountedPythonImporter(); action(DriverScriptAction::serviceNetwork);
+    s.gui.clearScreen(); if(s.client)s.client->clearUiCallbacks();
+    networkServiceEnd(); puCleanUpJunk();
+    ssgGetCurrentContext()->forceBasicState();
+    gameSceneRoots.clear();
+    bindings::swig_init_gamec_bindings(true);
+    bindings::swig_init_network_bindings(true);
+    configureGamePython(); Py_Initialize(); installMountedPythonImporter(); networkServiceEnd();
     if (!bindings::initializeBasicGameModule() || !bindings::initializeNetworkModule()) {
         PyErr_Print(); s.fatal(s.context); return;
     }

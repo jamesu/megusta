@@ -6,8 +6,8 @@ class ssgEntity;
 namespace megusta {
 class GuiRenderer;
 class GuiVerticalSlider;
-struct GuiShellActions;
 struct GuiShapeServices;
+struct DriverScriptServices;
 struct GuiNameCode { const char* name; std::uint32_t code; };
 class iRoomClient;
 struct GuiDebugState {
@@ -46,7 +46,7 @@ struct GuiRuntime {
     float previewTranslation[3]={-2,6,-1};
     float previewAngle=0;
     float lozengePreviousTime[2],lozengeStaggerFade[2];
-    GuiShellActions* shellActions;
+    DriverScriptServices* scriptServices=nullptr;
     GuiShapeServices* shapes;
 };
 extern GuiRuntime* guiRuntime;

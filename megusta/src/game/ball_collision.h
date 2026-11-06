@@ -2,6 +2,10 @@
 #include "ball.h"
 #include "scene_grid.h"
 namespace megusta {
+class PlayersManager;
+class BallsManager;
+struct TaskRuntime;
+struct BallGameplayServices;
 // The original collision routines share one mutable sweep and result workspace.
 class BallCollisionWorkspace {
 public:
@@ -44,9 +48,12 @@ struct BallPhysicsServices {
     const char* overlapRecovery;
     const char* slowRecovery;
     const char* fastRecovery;
-    void* context;
+    PlayersManager& players;
+    BallsManager& balls;
+    TaskRuntime& tasks;
+    const BallGameplayServices& gameplay;
+    void* impactContext;
     void (*playBallImpact)(void*, const float* position);
     void (*playObjectImpact)(void*, SceneObjectRecord&, const float* position, const float* normalVelocity);
-    void (*dispatchTerminalEvent)(void*);
 };
 }

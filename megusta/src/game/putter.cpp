@@ -5,6 +5,12 @@
 #include "putt_map_runtime.h"
 #include "putt_guide.h"
 #include "scene_grid.h"
+#include "game_shape_adapter.h"
+#include "room_client.h"
+#include "camera.h"
+#include "sounds.h"
+#include "effect.h"
+#include "../engine/multi_texture.h"
 #include <cmath>
 #include <cstdio>
 namespace megusta {
@@ -37,12 +43,14 @@ void Putter::handleInputMode2(PutterHumanInputServices& s) {
         if ((player.shapeAdapter.playbackFlags&1) && animationId==3) setAnimation(0,s.animation);
     }
     if (state==1) {
-        aimHeading=s.cameraHeading; captureInputAnchor(s.waitingForRemote,player.isHuman,s.mouseX,s.mouseY);
-        if ((s.buttons&0x02000000u) || s.waitingForRemote || !s.turnReady) return;
+        bool waiting=s.client&&s.client->shouldWaitForRemoteTurn();
+        bool ready=!s.client||s.client->isTurnStateReady();
+        aimHeading=s.cameraHeading; captureInputAnchor(waiting,player.isHuman,s.mouseX,s.mouseY);
+        if ((s.buttons&0x02000000u) || waiting || !ready) return;
         bool mousePress=((s.buttons&~s.previousButtons)&0x01000000u)!=0;
         if (s.joystickAxis3>0 || (mousePress && s.mouseY>5)) {
             previousJoystickAxis=0;
-            if (s.stopControlCamera(s.context)) { state=9; return; }
+            if (s.camera.stopControlCam(s.cameraRuntime)) { state=9; return; }
             if (mousePress) { previousDragMouseY=0; dragStartY=static_cast<float>(s.mouseY)-3.0f; }
             else dragStartY=0;
             setAnimation(0,s.animation); state=2; return;
@@ -148,7 +156,8 @@ void Putter::updateMode0(PutterControlServices& s) {
             bool good=false;
             if (effectivePower<=0.15f) {
                 if (effectivePower>0.12f) {
-                    s.playSound(s.context,"goodhit",0); s.warmupEffect(s.context,0); s.startEffect(s.context); effectFrames=20; good=true;
+                    s.sounds.play("goodhit",0); if(effect) static_cast<Effect*>(effect)->warmup(0);
+                    if(effect) static_cast<Effect*>(effect)->start(); effectFrames=20; good=true;
                 } else if (effectivePower>0) {
                     float high=step+angle;
                     shotAngleOffset=static_cast<float>(high-(effectivePower/scale)*step);
@@ -156,7 +165,7 @@ void Putter::updateMode0(PutterControlServices& s) {
             } else if (effectivePower<0.27f) {
                 shotAngleOffset=static_cast<float>(((0.26-effectivePower)/scale)*step-(step+angle));
             } else shotAngleOffset=-angle;
-            if (!good) s.playSound(s.context,"swing2",0);
+            if (!good) s.sounds.play("swing2",0);
         }
         long double curve=evaluatePutterPowerCurve(power,s.tuning);
         strikeBall(static_cast<float>(-curve*shotSpeedScale),s.strike); state=6; return;
@@ -194,10 +203,12 @@ void Putter::handleInputMode0(PutterHumanInputServices& s) {
     }
     bool press=((s.buttons & ~s.previousButtons)&(0x40u|0x01000000u))!=0;
     if (state==1) {
-        aimHeading=s.cameraHeading; captureInputAnchor(s.waitingForRemote,player.isHuman,s.mouseX,s.mouseY);
-        if ((s.buttons&0x02000000u) || s.waitingForRemote || !s.turnReady) return;
+        bool waiting=s.client&&s.client->shouldWaitForRemoteTurn();
+        bool ready=!s.client||s.client->isTurnStateReady();
+        aimHeading=s.cameraHeading; captureInputAnchor(waiting,player.isHuman,s.mouseX,s.mouseY);
+        if ((s.buttons&0x02000000u) || waiting || !ready) return;
         if (press) {
-            if (!s.stopControlCamera(s.context)) { setAnimation(0,s.animation); state=2; s.playSound(s.context,"swing1",0); }
+            if (!s.camera.stopControlCam(s.cameraRuntime)) { setAnimation(0,s.animation); state=2; s.sounds.play("swing1",0); }
             else state=9;
             return;
         }
@@ -214,7 +225,7 @@ void Putter::handleInputMode0(PutterHumanInputServices& s) {
     } else if (state==2) {
         aimHeading=s.cameraHeading;
         if (!(s.buttons&0x02000000u) && press) {
-            power=effectivePower; state=3; s.playSound(s.context,"swing2",0);
+            power=effectivePower; state=3; s.sounds.play("swing2",0);
             if (power<0.28f) { state=5; player.shapeAdapter.startPlayback(s.shape); }
         }
     } else if (state==3 && press) { state=5; player.shapeAdapter.startPlayback(s.shape); }
@@ -233,13 +244,13 @@ void Putter::handleInputMode1(PutterHumanInputServices& s) {
         Player& other=s.players.playerStorage[i];
         if (!other.isDone(s.balls) && !(other.getBall(s.balls)->flags&1)) return;
     }
-    if (s.waitingForRemote) {
+    if (s.client&&s.client->shouldWaitForRemoteTurn()) {
         if (state==2 && (power>=s.remotePowerThreshold || s.tick-animationIdleStart>=animationIdleInterval)) {
             state=5; player.shapeAdapter.startPlayback(s.shape);
         }
         return;
     }
-    if (!s.turnReady) return;
+    if (s.client&&!s.client->isTurnStateReady()) return;
     if (s.buttons || aimHeading!=previousAimAngle) {
         previousAimAngle=aimHeading; animationIdleStart=s.tick; animationIdleInterval=1800; gestureStart=s.tick; gestureInterval=0;
         if ((player.shapeAdapter.playbackFlags&1) && animationId==3) setAnimation(0,s.animation);
@@ -250,7 +261,7 @@ void Putter::handleInputMode1(PutterHumanInputServices& s) {
         if (inputGuardFrames>0) { --inputGuardFrames; return; }
         if (s.buttons&0x02000000u) return;
         if (pressed) {
-            if (!s.stopControlCamera(s.context)) { setAnimation(0,s.animation); state=2; s.playSound(s.context,"swing1",0); }
+            if (!s.camera.stopControlCam(s.cameraRuntime)) { setAnimation(0,s.animation); state=2; s.sounds.play("swing1",0); }
             else state=9;
             return;
         }
@@ -266,7 +277,7 @@ void Putter::handleInputMode1(PutterHumanInputServices& s) {
         }
     } else if (state==2 || state==4) {
         aimHeading=s.cameraHeading;
-        if (!pressed) { state=5; player.shapeAdapter.startPlayback(s.shape); s.playSound(s.context,"swing2",0); }
+        if (!pressed) { state=5; player.shapeAdapter.startPlayback(s.shape); s.sounds.play("swing2",0); }
     } else if (state==9 && !pressed) { state=1; inputGuardFrames=10; }
 }
 void Putter::updateMode1(PutterControlServices& s) {
@@ -315,13 +326,14 @@ void Putter::drawAimPreview(PutterAimServices& s) {
     if (!s.player) return;
     Ball* ball=s.player->getBall(s.balls);
     if (state!=1 && state!=2) { s.guide.hideGeometry(); return; }
-    aimHeading=s.cameraHeading; s.serviceNetworkEnd(s.context);
+    aimHeading=s.cameraHeading; networkServiceEnd();
     Point3F aim;
-    if (!s.waitForRemoteTurn(s.context)) { computeShotVector(1.0f,aim,*s.player,s.balls); s.sendAimVector(s.context,aim); }
+    const bool waiting=s.client&&s.client->shouldWaitForRemoteTurn();
+    if (!waiting) { computeShotVector(1.0f,aim,*s.player,s.balls); if(s.client)s.client->sendAimVector(aim); }
     else aim={aimTarget[0],aimTarget[1],aimTarget[2]};
     float components[3]={aim.x,aim.y,aim.z};
     if (resetAimSmoothing) { resetAimSmoothing=false; for (int i=0;i<3;++i) smoothedAim[i]=components[i]; }
-    else if (s.waitForRemoteTurn(s.context)) {
+    else if (waiting) {
         for (int i=0;i<3;++i) {
             float delta=components[i]-smoothedAim[i];
             if (delta>=0.1f) delta=0.1f; else if (delta<=-0.1f) delta=-0.1f;
@@ -345,7 +357,7 @@ void Putter::drawAimPreview(PutterAimServices& s) {
         sgMat4 rotation; sgMakeCoordMat4(rotation,0,0,0,270,0,0); sgPostMultMat4(matrix,rotation);
         matrix[3][0]=ball->position[0]; matrix[3][1]=ball->position[1]; matrix[3][2]=ball->position[2]; matrix[3][3]=1;
     }
-    if (state==1 && s.canAdvanceSimulation(s.context)) {
+    if (state==1 && (!s.client || s.client->canAdvanceSimulation())) {
         Point3F origin{ball->position[0],ball->position[1],static_cast<float>(ball->position[2]+0.2)};
         Point3F travel=forward;
         float v=forward.x*forward.x+forward.z*forward.z+forward.y*forward.y;
@@ -358,8 +370,13 @@ void Putter::drawAimPreview(PutterAimServices& s) {
     }
     s.guide.hideGeometry();
 }
-void Putter::drawCharacterPass1(PutterDrawServices& s) { s.drawPreview(s.context,s.player); }
-void Putter::drawCharacterPass2(PutterDrawServices& s) { s.drawShadow(s.context,s.player); s.serviceNetworkEnd(s.context); }
+void Putter::drawCharacterPass1(PutterDrawServices& s) {
+    s.player.shapeAdapter.drawPreview(s.cameraView,s.player.characterTransform[0],s.player.leftHanded);
+}
+void Putter::drawCharacterPass2(PutterDrawServices& s) {
+    s.player.shapeAdapter.drawShadow(s.cameraView,s.player.characterTransform[0],s.player.leftHanded);
+    networkServiceEnd();
+}
 void Putter::drawCharacterOcclusionPass(PutterDrawServices& s) {
     auto collision=defaultGridCollisionServices();
     for (int i=0;i<2;++i) {
@@ -372,17 +389,21 @@ void Putter::drawCharacterOcclusionPass(PutterDrawServices& s) {
     }
     if (putterOcclusionLevel!=0.0f) {
         putterOcclusionLevel-=1.0f;
-        s.drawOcclusion(s.context,s.player,s.player.leftHanded,putterOcclusionLevel*0.005f);
+        s.player.shapeAdapter.drawWithAlpha(s.cameraView,s.player.characterTransform[0],
+            s.player.leftHanded,putterOcclusionLevel*0.005f);
     }
 }
-void showPutterPowerCurve(const PutterTuning& tuning,void* context,void (*showMessage)(void*,const char*,int)) {
+void showPutterPowerCurve(const PutterTuning& tuning,PlayersManager& players,std::uint32_t tick) {
     char message[128];
     std::snprintf(message,sizeof(message),"F = P * P * %.2f + %.2f",static_cast<double>(tuning.powerCurveQuadratic),static_cast<double>(tuning.powerCurveOffset));
-    showMessage(context,message,90);
+    players.showMessage(message,90,tick);
 }
-void Putter::releaseHoleResources(void* context,void (*destroyAtlas)(void*),void (*releaseEffect)(void*,void*)) {
-    destroyAtlas(context); hudAtlas=nullptr;
-    if (effect) { releaseEffect(context,effect); effect=nullptr; }
+void Putter::releaseHoleResources() {
+    pix::destroyMultiTexture(static_cast<pix::MultiTextureList*>(hudAtlas)); hudAtlas=nullptr;
+    if (effect) {
+        auto* emitter=static_cast<Effect*>(effect);
+        emitter->releaseTexture(); delete emitter; effect=nullptr;
+    }
 }
 void Putter::loadHoleResources(PutterResourceServices& s) {
     s.guide.attachSceneRoots(s.sceneRoot,s.secondarySceneRoot); state=0; idleStart=s.tick; idleInterval=0;
@@ -390,15 +411,16 @@ void Putter::loadHoleResources(PutterResourceServices& s) {
     teeObject=nullptr; powerBarVisible=false; unresolvedField80=0;
     hudAtlas=s.loadAtlas(s.context,"data/textures/gui/HUDTEX.mpx",true,0,88,79,79);
     if (!hudAtlas || s.atlasTextureCount(s.context,hudAtlas)!=8) s.fatal(s.context);
-    s.preloadSound(s.context,"swing1",2); s.preloadSound(s.context,"swing2",2); s.preloadSound(s.context,"goodhit",2);
-    hudCenterX=s.screenWidth/2; effect=s.createEffect(s.context);
-    s.setEffectTexture(s.context,effect,"data/textures/effects/yellow.png");
-    s.setEffectPosition(s.context,effect,static_cast<float>(hudCenterX)+207.0f,52,0,0);
-    s.setEffectScalar(s.context,effect,PutterEffectScalar::rate,10); s.setEffectScalar(s.context,effect,PutterEffectScalar::duration,50);
-    s.setEffectVector(s.context,effect,PutterEffectVector::direction,0,5,0); s.setEffectVector(s.context,effect,PutterEffectVector::dispersion,0.2f,0,0);
-    s.setEffectVector(s.context,effect,PutterEffectVector::gravity,0,-0.5f,0); s.setEffectVector(s.context,effect,PutterEffectVector::volume,0.6f,2,0);
-    s.setEffectScalar(s.context,effect,PutterEffectScalar::scale,1); s.setEffectScalar(s.context,effect,PutterEffectScalar::friction,1); s.setEffectScalar(s.context,effect,PutterEffectScalar::ramp,1);
-    s.warmupEffect(s.context,effect,0); effectFrames=-1;
+    s.sounds.preload("swing1",2); s.sounds.preload("swing2",2); s.sounds.preload("goodhit",2);
+    hudCenterX=s.screenWidth/2;
+    auto* emitter=new Effect(3.0f); effect=emitter;
+    emitter->setTexture("data/textures/effects/yellow.png");
+    emitter->setPosition(static_cast<float>(hudCenterX)+207.0f,52,0,0);
+    emitter->setRate(10); emitter->setDuration(50);
+    emitter->setDirection(0,5,0); emitter->setDispersion(0.2f,0,0);
+    emitter->setGravity(0,-0.5f,0); emitter->setVolume(0.6f,2,0);
+    emitter->setScale(1); emitter->setFriction(1); emitter->setRamp(1);
+    emitter->warmup(0); effectFrames=-1;
 }
 void Putter::setAnimation(int animation,PutterAnimationServices& s) {
     if (s.editing) return;
@@ -407,7 +429,7 @@ void Putter::setAnimation(int animation,PutterAnimationServices& s) {
         if (animation<0) return;
         if (animation<10 && s.voiceSuffixes[animation]) {
             char name[20]; std::snprintf(name,sizeof(name),"%s%s",s.player->modelTag,s.voiceSuffixes[animation]);
-            s.playVoice(s.context,name,0);
+            s.sounds.playVoice(name,0);
         }
     }
     if (animation==0) {
@@ -448,21 +470,23 @@ void Putter::strikeBall(float speed,const PutterStrikeServices& s) {
         float y=static_cast<float>(sine*vector.x+static_cast<float>(cosine*vector.y));
         vector.x=x; vector.y=y;
     }
-    if (s.waitForRemoteTurn(s.context)) s.remoteVector(s.context,vector);
-    s.sendPutt(s.context,power,vector);
+    if (s.client && s.client->shouldWaitForRemoteTurn())
+        vector={aimTarget[0],aimTarget[1],aimTarget[2]};
+    if (s.client) s.client->sendPutt(power,vector);
     s.player.getBall(s.balls)->strike(vector,s.gameplay);
-    s.enterCameraFollow(s.context);
+    s.camera.enterPostShotFollow(s.cameraRuntime,s.player,*s.player.getBall(s.balls));
 }
 void Putter::dispatchInput(PutterControlServices& s) {
-    if (!s.active || (s.hasTabElements && !s.waitingForRemote)) return;
+    bool waitingForRemote=s.humanInput.client&&s.humanInput.client->shouldWaitForRemoteTurn();
+    if (!s.players.isActive() || (s.hasTabElements && !waitingForRemote)) return;
     if (s.modifiers&1) switch (s.keyCode) {
-    case '+': case '=': s.tuning.powerCurveOffset+=0.05; s.showPowerCurve(s.context); break;
+    case '+': case '=': s.tuning.powerCurveOffset+=0.05; showPutterPowerCurve(s.tuning,s.players,s.fixedTick); break;
     case ',': case '<': --s.tuning.debugValue; break;
-    case '-': case '_': s.tuning.powerCurveOffset-=0.05; s.showPowerCurve(s.context); break;
+    case '-': case '_': s.tuning.powerCurveOffset-=0.05; showPutterPowerCurve(s.tuning,s.players,s.fixedTick); break;
     case '.': case '>': ++s.tuning.debugValue; break;
     case ':': case ';': s.player.controlMode=s.player.controlMode<2 ? s.player.controlMode+1 : 0; break;
-    case '[': case '{': s.tuning.powerCurveQuadratic-=0.25; s.showPowerCurve(s.context); break;
-    case ']': case '}': s.tuning.powerCurveQuadratic+=0.25; s.showPowerCurve(s.context); break;
+    case '[': case '{': s.tuning.powerCurveQuadratic-=0.25; showPutterPowerCurve(s.tuning,s.players,s.fixedTick); break;
+    case ']': case '}': s.tuning.powerCurveQuadratic+=0.25; showPutterPowerCurve(s.tuning,s.players,s.fixedTick); break;
     }
     if (!s.player.isHuman) handleAutomatedInput(s.automatedInput);
     else if (s.player.controlMode==0) handleInputMode0(s.humanInput);
@@ -477,22 +501,22 @@ void Putter::advanceControl(PutterControlServices& s) {
         elapsed=value*0.033333335f;
     }
     s.player.shapeAdapter.advanceTime(elapsed,s.shape);
-    if (s.active) {
+    if (s.players.isActive()) {
         if (!s.player.isHuman) updateAutomatedStroke(s);
         else if (s.player.controlMode>=0 && s.player.controlMode<=2) {
             if (s.player.controlMode==0) updateMode0(s);
             else if (s.player.controlMode==1) updateMode1(s);
             else updateMode2(s);
             if (s.player.controlMode==0) {
-                s.advanceEffect(s.context);
-                if (effectFrames>=0) { if (!effectFrames) s.stopEffect(s.context); --effectFrames; }
+                if(effect) static_cast<Effect*>(effect)->advanceParticles();
+                if (effectFrames>=0) { if (!effectFrames && effect) static_cast<Effect*>(effect)->stop(); --effectFrames; }
             }
         }
     }
     s.guide.animateColors(s.fixedTick);
 }
 void Putter::updateAutomatedStroke(PutterControlServices& s) {
-    if (s.player.isHuman) { s.fatal(s.context); return; }
+    if (s.player.isHuman) { if(s.playerServices.fatal)s.playerServices.fatal(s.playerServices.context); return; }
     auto& ai=s.player.ai;
     if (state==2) {
         float increment=static_cast<float>(1.0/(conditionalPowerStep*60.0));
@@ -508,7 +532,7 @@ void Putter::updateAutomatedStroke(PutterControlServices& s) {
         if (time>=conditionalPowerStep) time=conditionalPowerStep; else if (time<=0) time=0;
         s.player.shapeAdapter.setTime(time,s.shape); return;
     }
-    if (state==3 || state==7 || state==8 || state==9) { s.fatal(s.context); return; }
+    if (state==3 || state==7 || state==8 || state==9) { if(s.playerServices.fatal)s.playerServices.fatal(s.playerServices.context); return; }
     if (state==5) {
         aimHeading=ai.decisionState==4 ? ai.choice.heading : ai.smoothedHeading;
         power=ai.choice.power;
@@ -551,8 +575,11 @@ void Putter::captureInputAnchor(bool waitingForRemote,bool human,int mouseX,int 
     power=0;
 }
 void Putter::beginTurn(Player& player,Random& random,std::uint32_t tick,std::uint32_t taskTick,
-                       PutterAnimationServices& animation,void* context,void (*captureAnchor)(void*),void (*resetCamera)(void*)) {
-    setAnimation(0,animation); captureAnchor(context); resetCamera(context); player.ai.resetDecision(taskTick);
+                       PutterAnimationServices& animation,GameInputFrame& input,iRoomClient* client,
+                       Camera& camera,CameraFrameServices& cameraFrame) {
+    setAnimation(0,animation);
+    captureInputAnchor(client&&client->shouldWaitForRemoteTurn(),player.isHuman,input.mouse.x,input.mouse.y);
+    camera.resetFollowState(cameraFrame); player.ai.resetDecision(taskTick);
     state=1; inputGuardFrames=10; resetAimSmoothing=true;
     idleStart=tick; idleInterval=random.generate()%60u+300u;
     animationIdleStart=tick; animationIdleInterval=1800; gestureStart=tick; gestureInterval=0;
@@ -565,7 +592,7 @@ void Putter::enterFollowThrough(float newPower,void* context,void (*enterCameraF
 }
 void Putter::handleAutomatedInput(PutterAutomatedServices& s) {
     Player* player=s.players.currentPlayer;
-    if (!player || player->isHuman) { s.fatal(s.context); return; }
+    if (!player || player->isHuman) { if(s.playerServices.fatal)s.playerServices.fatal(s.playerServices.context); return; }
     animationIdleStart=s.fixedTick; animationIdleInterval=1800;
     gestureStart=s.fixedTick; gestureInterval=0;
     Ball* ball=player->getBall(s.balls);
@@ -574,21 +601,21 @@ void Putter::handleAutomatedInput(PutterAutomatedServices& s) {
         Player& other=s.players.playerStorage[i];
         if (!other.isDone(s.balls) && !(other.getBall(s.balls)->flags&1)) return;
     }
-    if (s.waitForRemoteTurn(s.context)) {
+    if (s.client && s.client->shouldWaitForRemoteTurn()) {
         if (state==2 && power>=s.remotePowerThreshold) { state=5; player->shapeAdapter.startPlayback(s.shape); }
         return;
     }
-    if (!s.turnStateReady(s.context)) return;
+    if (s.client && !s.client->isTurnStateReady()) return;
     if (state==9) { state=1; inputGuardFrames=10; return; }
     if (state==1) {
-        if (!s.networkInGame && (s.inputButtons&0x01000000u) && s.cameraControlMode) s.stopControlCamera(s.context);
+        if (!s.networkInGame && (s.inputButtons&0x01000000u) && s.cameraControlMode) s.camera.stopControlCam(s.cameraRuntime);
         if (player->ai.decisionState==1) {
             player->tryActivatePowerUp(s.playerServices.random,s.playerServices);
             setAnimation((s.animationRandom.generate()&1) ? 4 : 5,s.animation);
         }
         if (s.puttMap.updatePlayerDecision(*player,s.cameraControlMode,s.cameraHeading,s.taskTick)) {
             aimHeading=player->ai.decisionState==4 ? player->ai.choice.heading : player->ai.smoothedHeading;
-            s.cameraHeading=aimHeading; s.stopControlCamera(s.context); setAnimation(0,s.animation);
+            s.cameraHeading=aimHeading; s.camera.stopControlCam(s.cameraRuntime); setAnimation(0,s.animation);
             state=2; resetAimSmoothing=true; power=0;
             if (player->ai.choice.hasCondition) conditionalPowerStep=0.2f;
         }

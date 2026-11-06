@@ -22,10 +22,6 @@ void gameEnableJoystick(bool enabled) { platform().registerJoystick(enabled); }
 std::uint32_t gameMillisecondsForContext(void*) { return gameMilliseconds(); }
 std::uint32_t gameModifiersForContext(void*) { return gameModifiers(); }
 void gameSleepForContext(void*,std::uint32_t usec) { gameSleepMicroseconds(usec); }
-bool handleDriverPlatformAction(DriverAction action) {
-    if (action!=DriverAction::dispatchJoystick) return false;
-    platform().dispatchJoystick(); return true;
-}
 void bindCameraPlatformServices(CameraServices& services) { services.setMouseCapture=gameSetCursorMode; }
 void bindDriverCallbacks(DriverPlatformBinding& binding) {
     bindGamePlatform(&binding.runtime);

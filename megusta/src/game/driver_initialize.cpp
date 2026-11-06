@@ -54,8 +54,6 @@ void Driver::initialize(DriverInitialization& s) {
     bindGroundShadowScene(s.powerUpsRuntime.objects,s.powerUpsRuntime.grid);
     dts::bindIflResourceService(s.resources.services().open,s.resources.services().close);
     s.movieHost={s.callbacks.runtime.nativeWindowHandle(),s.callbacks.runtime.capabilities().graphics}; engine_movie::bindMovieHost(s.movieHost);
-    if (s.guiRuntime.shellActions && !s.guiRuntime.shellActions->playMovie)
-        s.guiRuntime.shellActions->playMovie=[](void*,const char* name,int flags,int x,int y,int w,int h){return engine_movie::playMovie(name,flags,x,y,w,h);};
     auto& playerServices=s.callbacks.services.holeServices.runtime.host.playerServices;
     playerServices.releasePlayerShape=[](void*,Player& player){player.shapeAdapter.release();};
     playerServices.loadPlayerShape=[](void*,Player& player,unsigned mask,bool shadow){player.shapeAdapter.load(player.modelTag,mask,shadow);};
@@ -151,11 +149,7 @@ void Driver::initialize(DriverInitialization& s) {
     values.set("objects",&s.callbacks.services.script.holeServices.runtime.objects);
     bindings::bindGameVariables(&values); bindings::bindSoundServices(&s.sounds);
     bindings::bindConfigTaskServices(&s.resources.mounts(),&tasks);
-    s.callbacks.services.script.sounds=&s.sounds;
-    s.callbacks.services.sounds=&s.sounds;
-    if (!s.callbacks.services.audioCamera)
-        throw std::logic_error("Driver initialization requires the shared Camera object");
-    values.set("camera",s.callbacks.services.audioCamera);
+    values.set("camera",&s.callbacks.services.audioCamera);
     configureGamePython();
     Py_Initialize();
     installMountedPythonImporter();

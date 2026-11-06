@@ -10,6 +10,14 @@ class Task;
 struct TaskRuntime;
 struct BallRestServices;
 struct PlayerServices;
+class Putter;
+class Camera;
+class iRoomClient;
+class PowerUps;
+struct CameraFrameServices;
+struct PutterAnimationServices;
+struct PutterTurnRuntime;
+struct GameInputFrame;
 struct PlayerInputContext;
 // The player's three inventory entries are not world PowerUp objects. The
 // saved bodies address only the ID at each 0xc0-byte entry stride; the
@@ -52,22 +60,15 @@ public:
 struct PlayerServices {
     void* context;
     void (*fatal)(void*);
-    void (*setPowerUpDirty)(void*);
     bool (*sendPickupPowerUp)(void*,std::uint32_t);
     void (*sendActivatePowerUp)(void*);
     void (*playButtonSound)(void*);
-    void (*restartCameraFollow)(void*);
     GameConfig& config;
     Random& random;
     bool (*networkInGame)(void*);
     void (*finishPutt)(void*);
     void (*logSetCurrent)(void*,const char*);
-    void (*beginHoleTransition)(void*);
-    bool (*isPutterSettled)(void*);
     bool (*canProgressActivePutt)(void*);
-    void (*resetPowerUpTurnState)(void*);
-    void (*beginPutterTurn)(void*);
-    void (*forceDeadPlayerPickup)(void*);
     bool (*acknowledgeFrameGate)(void*);
     void (*reportMissingEvent)(void*,int line);
     void (*releasePlayerShape)(void*,Player&);
@@ -82,6 +83,21 @@ struct PlayerServices {
     std::uint32_t (*timeMilliseconds)(void*);
     void (*serviceNetworkEnd)(void*);
     void (*setPlayerSkin)(void*,Player&,int);
+    PutterTurnRuntime* putterTurn=nullptr;
+    PowerUps* powerUps=nullptr;
+    int* powerUpDirty=nullptr;
+    iRoomClient** client=nullptr;
+};
+struct PutterTurnRuntime {
+    Putter* putter=nullptr;
+    PutterAnimationServices* animation=nullptr;
+    Camera* camera=nullptr;
+    CameraFrameServices* cameraFrame=nullptr;
+    GameInputFrame* input=nullptr;
+    iRoomClient** client=nullptr;
+    std::uint32_t* fixedTick=nullptr;
+    std::uint32_t* taskTick=nullptr;
+    int* editorMode=nullptr;
 };
 struct InputMousePosition { std::int32_t x,y; };
 struct GameInputFrame {

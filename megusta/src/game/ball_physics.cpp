@@ -1,4 +1,5 @@
 #include "ball_collision.h"
+#include "player.h"
 #include <cmath>
 #include <cstring>
 namespace megusta {
@@ -113,7 +114,7 @@ void Ball::resolveContactResponse(BallPhysicsServices& services) {
         if (hit.kind==4) {
             if (hit.otherBall->contact.kind==4) {
                 if (static_cast<unsigned>(playerIndex)<static_cast<unsigned>(hit.otherBall->playerIndex)) {
-                    services.playBallImpact(services.context,hit.position);
+                    services.playBallImpact(services.impactContext,hit.position);
                     float saved[3]={normalVelocity[0],normalVelocity[1],normalVelocity[2]};
                     assign(normalVelocity,hit.otherBall->normalVelocity); assign(hit.otherBall->normalVelocity,saved);
                 }
@@ -122,7 +123,7 @@ void Ball::resolveContactResponse(BallPhysicsServices& services) {
             add(velocity,normalVelocity);
         } else {
             SceneObjectRecord& object=services.objects.objects[hit.objectIndex];
-            services.playObjectImpact(services.context,object,hit.position,normalVelocity);
+            services.playObjectImpact(services.impactContext,object,hit.position,normalVelocity);
             if (!isRolling() || (flags&0x80u)) {
                 add(velocity,normalVelocity); rescaleContactSpeed(hit.sweepParameter,services.acceleration);
                 decomposeContactVelocity(hit.normal);
@@ -141,7 +142,8 @@ void Ball::resolveContactResponse(BallPhysicsServices& services) {
         smallMotionStepCount=0;
         const float* low=services.grid.bounds.getMin(); const float* high=services.grid.bounds.getMax();
         if (position[0]<low[0] || high[0]<position[0] || position[1]<low[1] ||
-            high[1]<position[1] || position[2]<low[2]) services.dispatchTerminalEvent(services.context);
+            high[1]<position[1] || position[2]<low[2])
+            services.players.dispatchTerminalEvent(services.balls,services.tasks,services.gameplay);
     } else {
         ++smallMotionStepCount;
         if (smallMotionStepCount<10) { if (smallMotionStepCount>4) rollingContact.kind=0; }

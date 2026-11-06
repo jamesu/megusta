@@ -1,4 +1,5 @@
 #include "driver.h"
+#include "room_client.h"
 #include "../engine/string_services.h"
 #include <cstdio>
 namespace megusta {
@@ -30,7 +31,7 @@ void DriverAutorun::update(bool force,Driver& driver,DriverScriptServices& scrip
     if (static_cast<std::int32_t>(deadline)<=static_cast<std::int32_t>(now)) {
         int seconds;
         if (!menu) {
-            if (services.players.currentPlayer) services.serviceNetwork(services.context);
+            if (services.players.currentPlayer) networkServiceEnd();
             driver.changeScript("mainmenu",scripts); seconds=menuSeconds;
         } else {
             auto& config=services.config;

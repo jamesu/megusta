@@ -9,17 +9,16 @@ struct DriverViewport {
     void mapMouse(int& x,int& y) const;
     void unmapMouse(int& x,int& y) const;
 };
-enum class DriverAction {
-    updateGuiFrameDelta,hideCursor,showCursor,drawGuiBackground,
-    serviceNetwork,drawGuiRoot,drawPerformanceOverlay,drawChatOverlay,drawTooltip,
-    drawConsoleOverlay,flushScenePreviews,updateAudioListener,updateGuiInteraction,
-    pollDisconnect,advanceZoom,processTurnSync,dispatchJoystick
-};
 class Driver;
 struct DriverScriptServices;
 struct DriverInitialization;
 class Sounds;
 class Camera;
+class guiSystem;
+class iRoomClient;
+class Console;
+struct GuiRuntime;
+struct GuiDebugState;
 struct DriverAutorunServices {
     GameConfigRuntime& config;
     Hole& hole;
@@ -27,7 +26,6 @@ struct DriverAutorunServices {
     InputState& input;
     void* context;
     std::uint32_t (*timeMilliseconds)(void*);
-    void (*serviceNetwork)(void*);
 };
 class DriverAutorun {
 public:
@@ -40,20 +38,16 @@ public:
     void update(bool force,Driver& driver,DriverScriptServices& scripts,DriverAutorunServices& services);
     void restoreConfig(const char* name,Driver& driver,DriverScriptServices& scripts,DriverAutorunServices& services);
 };
-enum class DriverScriptAction {
-    stopNonStreamingSounds,serviceNetwork,unloadGuiSoundGroup,clearGuiScreen,
-    clearNetworkUiCallbacks,cleanupWidgets,applyDefaultSceneState,clearSceneRoots,
-    resetGameBindings,resetNetworkBindings,registerGameBindings,registerNetworkBindings
-};
 struct DriverScriptServices {
     HoleServices& holeServices;
+    guiSystem& gui;
+    iRoomClient*& client;
+    Sounds& sounds;
     void* context;
-    void (*action)(void*,DriverScriptAction);
     void (*fatal)(void*);
     DriverAutorun& autorun;
     DriverAutorunServices& autorunServices;
     const char* argumentDelimiters;
-    Sounds* sounds=nullptr;
 };
 struct DriverInputServices {
     InputState& input;
@@ -83,8 +77,14 @@ struct DriverServices {
     DriverScriptServices& script;
     bool& slowMotion;
     int& slowMotionTickDivider;
+    guiSystem& gui;
+    GuiRuntime& guiState;
+    GuiDebugState& guiDebug;
+    Console& console;
+    iRoomClient*& client;
+    Sounds& sounds;
+    Camera& audioCamera;
     void* context;
-    void (*action)(void*,DriverAction);
     bool (*shellOpen)(void*);
     bool (*hasBackground)(void*);
     bool (*hasSoftwareCursor)(void*);
@@ -95,8 +95,7 @@ struct DriverServices {
     std::uint32_t (*timeMilliseconds)(void*);
     void (*sleepMicroseconds)(void*,std::uint32_t);
     void (*displayWidgets)(void*,int,int);
-    Sounds* sounds=nullptr;
-    Camera* audioCamera=nullptr;
+    void (*dispatchJoystick)(void*);
 };
 class Driver {
 public:

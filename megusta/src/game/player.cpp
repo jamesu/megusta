@@ -1,6 +1,10 @@
 #include "player.h"
 #include "balls.h"
 #include "hole.h"
+#include "putter.h"
+#include "camera.h"
+#include "powerups.h"
+#include "room_client.h"
 #include <cstring>
 #include <new>
 #include <cmath>
@@ -15,18 +19,19 @@ void Player::takeMulligan(PlayersManager& players,BallsManager& balls,const Play
     Ball* ball=getBall(balls); auto ballFlags=static_cast<std::uint8_t>(ball->flags);
     if ((ballFlags&1u) && players.turnState==1) {
         if (this==players.currentPlayer && !(ballFlags&0x10u) && ball->restHistoryIndex && ball->restoreRestHistory()) {
-            flags|=8u; ball->flags &= ~2u; services.restartCameraFollow(services.context);
+            flags|=8u; ball->flags &= ~2u;
+            services.putterTurn->camera->restartFollow(services.putterTurn->cameraFrame->runtime);
         }
         if (strokeCount) --strokeCount;
         if (players.currentPlayer->lastStrokePenaltyFlag && penaltyCount) --penaltyCount;
     }
 }
 void Player::addPowerUpUnchecked(std::uint32_t id,const PlayerServices& services) {
-    for (auto& slot:powerUps) if (!slot.definitionId) { slot.definitionId=id; services.setPowerUpDirty(services.context); return; }
+    for (auto& slot:powerUps) if (!slot.definitionId) { slot.definitionId=id; *services.powerUpDirty=1; return; }
 }
 std::uint32_t Player::addPowerUp(std::uint32_t id,const PlayerServices& services) {
     for (auto& slot:powerUps) if (!slot.definitionId) {
-        if (services.sendPickupPowerUp(services.context,id)) { slot.definitionId=id; services.setPowerUpDirty(services.context); }
+        if (services.sendPickupPowerUp(services.context,id)) { slot.definitionId=id; *services.powerUpDirty=1; }
         return id;
     }
     return 0xffffffffu;
@@ -79,7 +84,7 @@ void PlayersManager::showMessage(const char* text,std::uint32_t duration,std::ui
 void PlayersManager::setCurrent(Player* player,BallsManager& balls,const PlayerServices& services) {
     if (!player) services.fatal(services.context);
     services.finishPutt(services.context); services.logSetCurrent(services.context,player->name);
-    if (player->isDone(balls)) { services.beginHoleTransition(services.context); return; }
+    if (player->isDone(balls)) { gameHole.beginTransition(gameHoleClock); return; }
     currentPlayer=player; turnState=0;
 }
 Player* PlayersManager::findNext(Player* player) {
@@ -99,9 +104,22 @@ void PlayersManager::beginTurn(BallsManager& balls,const PlayerServices& service
         }
     }
     Ball* ball=gamePlayers.currentPlayer->getBall(balls); ball->turnFlag=0;
-    services.resetPowerUpTurnState(services.context); services.setPowerUpDirty(services.context);
+    services.powerUps->slowMotion=false; services.powerUps->lastUsedPowerUpId=0; *services.powerUpDirty=1;
     gamePlayers.currentPlayer->getBall(balls)->flags &= ~2u;
-    turnState=1; services.beginPutterTurn(services.context); services.forceDeadPlayerPickup(services.context);
+    turnState=1;
+    if (!services.putterTurn || !services.putterTurn->putter || !services.putterTurn->animation ||
+        !services.putterTurn->camera || !services.putterTurn->cameraFrame || !services.putterTurn->input ||
+        !services.putterTurn->client || !services.putterTurn->fixedTick || !services.putterTurn->taskTick ||
+        !services.putterTurn->editorMode) {
+        if (services.fatal) services.fatal(services.context);
+        return;
+    }
+    PutterTurnRuntime& putterTurn=*services.putterTurn;
+    PutterAnimationServices& animation=*putterTurn.animation;
+    animation.player=currentPlayer; animation.tick=*putterTurn.fixedTick; animation.editing=*putterTurn.editorMode!=0;
+    putterTurn.putter->beginTurn(*currentPlayer,services.random,*putterTurn.fixedTick,*putterTurn.taskTick,
+        animation,*putterTurn.input,*putterTurn.client,*putterTurn.camera,*putterTurn.cameraFrame);
+    if (*services.client) (*services.client)->forceDeadPlayerPickup();
 }
 bool PlayersManager::isActive() const { return turnState==1 || turnState==2; }
 void PlayersManager::recordStroke(BallsManager& balls,const BallRestServices& rest) {
@@ -114,7 +132,7 @@ bool PlayersManager::allBallsReady(BallsManager& balls,const PlayerServices& ser
         Player& player=gamePlayers.playerStorage[i];
         if (!player.isDone(balls) && !(player.getBall(balls)->flags&1u)) return false;
     }
-    return services.isPutterSettled(services.context);
+    return services.putterTurn->putter->isTurnSettled(*currentPlayer,balls);
 }
 bool isBallPositionValid(float x,float y,const float* tee) {
     float lowX=tee[0]-2.5, highX=tee[0]+2.5, highY=tee[1]+2.5, lowY=tee[1]-2.5;

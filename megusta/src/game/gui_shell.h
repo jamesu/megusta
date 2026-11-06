@@ -12,11 +12,6 @@ struct GuiFontRegistry {
     fntTexFont* slots[10]{};
     fntTexFont *primary=nullptr,*console=nullptr,*secondary=nullptr;
 };
-struct GuiShellActions {
-    void* context;
-    int (*playMovie)(void*,const char*,int,int,int,int,int);
-    void (*configureAutorun)(void*,int,int,int);
-};
 extern GuiShellState* guiShellState;
 extern GuiFontRegistry guiFonts;
 void openGuiShell();
