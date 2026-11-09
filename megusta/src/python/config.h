@@ -9,7 +9,7 @@
 #ifndef MEGUSTA_PYTHON_CONFIG_H
 #define MEGUSTA_PYTHON_CONFIG_H
 
-#if defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__) || defined(__unix__) || defined(__APPLE__)
 /* wasm32 CPython embed: POSIX libc, 32-bit pointers/long, no OS threads. */
 #define HAVE_LIMITS_H 1
 #define HAVE_HYPOT 1
@@ -19,11 +19,23 @@
 #define HAVE_LONG_LONG 1
 #define LONG_LONG long long
 #define SIZEOF_INT 4
+#if defined(__LP64__)
+#define SIZEOF_LONG 8
+#define SIZEOF_VOID_P 8
+#define WORD_BIT 64
+#else
 #define SIZEOF_LONG 4
-#define SIZEOF_LONG_LONG 8
 #define SIZEOF_VOID_P 4
 #define WORD_BIT 32
+#endif
+#define SIZEOF_LONG_LONG 8
+#if defined(__EMSCRIPTEN__)
 #define COMPILER "[Emscripten wasm32]"
+#elif defined(__APPLE__)
+#define COMPILER "[native macOS]"
+#else
+#define COMPILER "[native POSIX]"
+#endif
 #define PYTHONPATH "/"
 #define DONT_HAVE_SIG_ALARM 1
 #define DONT_HAVE_SIG_PAUSE 1
@@ -37,7 +49,9 @@
 #define HAVE_PUTENV 1
 #define HAVE_MKTIME 1
 #define HAVE_SETVBUF 1
+#if defined(__EMSCRIPTEN__)
 #define HAVE_FTIME 1
+#endif
 #define HAVE_GETTIMEOFDAY 1
 #define HAVE_SYS_STAT_H 1
 #define HAVE_SYS_TYPES_H 1

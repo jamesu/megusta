@@ -138,6 +138,15 @@
  
 --- a/src/fnt/fntTXF.cxx
 +++ b/src/fnt/fntTXF.cxx
+@@ -24,7 +24,7 @@
+ 
+ #include "fntLocal.h"
+ 
+-#ifndef WIN32
++#if !defined(WIN32) && !defined(__EMSCRIPTEN__) && !defined(MEGUSTA_SDL)
+ #  ifndef macintosh
+ #    include <GL/glx.h>
+ #  else
 @@ -32,148 +32,15 @@
  #  endif
  #endif
@@ -1054,6 +1063,15 @@
 +}
 --- a/src/net/netSocket.cxx
 +++ b/src/net/netSocket.cxx
+@@ -39,7 +39,7 @@
+ 
+ #endif
+ 
+-#if !defined(STDC_HEADERS) && !defined(socklen_t)
++#if defined(WIN32) && !defined(socklen_t)
+ #define socklen_t int
+ #endif
+ 
 @@ -276,8 +276,8 @@
    int wsa_errno = WSAGetLastError();
    if ( wsa_errno != 0 )
@@ -1200,7 +1218,22 @@
  
 --- a/src/pui/pu.cxx
 +++ b/src/pui/pu.cxx
-@@ -31,8 +31,8 @@
+@@ -22,8 +22,12 @@
+ */
+ 
+ #include "puLocal.h"
+-
+-#ifndef WIN32
++#ifdef MEGUSTA_SDL
++#include <SDL.h>
++#define timeGetTime SDL_GetTicks
++#endif
++
++#if !defined(WIN32) && !defined(MEGUSTA_SDL)
+ #  ifndef macintosh
+ #    include <GL/glx.h>
+ #  else
+@@ -31,8 +35,8 @@
  #  endif
  #endif
  
@@ -1211,7 +1244,7 @@
  #endif
  
  #define PU_STRING_X_FUDGE 6
-@@ -42,8 +42,18 @@
+@@ -42,8 +46,26 @@
  
  static int puWindowWidth  = 400 ;
  static int puWindowHeight = 400 ;
@@ -1221,18 +1254,26 @@
 +
 +#ifdef MEGUSTA_PUI_FNT
 +// MG-PLIB-011: native client rectangle replaces the game window provider.
++ #if defined(WIN32)
 +static HWND puNativeWindow = NULL ;
 +void puSetNativeWindow ( HWND window ) { puNativeWindow = window ; }
 +int puGetWindow () { return (int)(INT_PTR)puNativeWindow ; }
 +int puGetWindowHeight () { RECT r ; return !openGLSize && puNativeWindow && GetClientRect(puNativeWindow,&r) ? r.bottom-r.top : puWindowHeight ; }
 +int puGetWindowWidth () { RECT r ; return !openGLSize && puNativeWindow && GetClientRect(puNativeWindow,&r) ? r.right-r.left : puWindowWidth ; }
++#else
++static void* puNativeWindow = NULL ;
++void puSetNativeWindow ( void* window ) { puNativeWindow = window ; }
++int puGetWindow () { return 0 ; }
++int puGetWindowHeight () { return puWindowHeight ; }
++int puGetWindowWidth () { return puWindowWidth ; }
++#endif
 +void puSetResizeMode ( int mode ) { openGLSize = mode ; }
 +void puSetWindowSize ( int width, int height ) { puWindowWidth=width ; puWindowHeight=height ; }
 +#elif defined(PU_NOT_USING_GLUT)
  
  int puGetWindow       () { return 0              ; }
  int puGetWindowHeight () { return puWindowHeight ; }
-@@ -58,9 +68,6 @@
+@@ -58,9 +80,6 @@
  static int fontBase = 0;
  static int fontSize[257];
  #else
@@ -1242,7 +1283,7 @@
  
  void puSetResizeMode ( int mode ) {
    openGLSize = mode ;
-@@ -118,7 +125,9 @@
+@@ -118,7 +137,9 @@
  
  static int glIsValidContext ()
  {
@@ -1253,7 +1294,7 @@
    return true ;
  #elif defined(WIN32)
    return ( wglGetCurrentContext () != NULL ) ;
-@@ -137,6 +146,26 @@
+@@ -137,6 +158,26 @@
  static float _puCursor_bgcolour [4] = { 1.0f, 1.0f, 1.0f, 1.0f } ; 
  static float _puCursor_fgcolour [4] = { 0.0f, 0.0f, 0.0f, 1.0f } ;  
  
@@ -1280,7 +1321,7 @@
  void   puHideCursor ( void ) { _puCursor_enable = FALSE ; }
  void   puShowCursor ( void ) { _puCursor_enable = TRUE  ; }
  int    puCursorIsHidden ( void ) { return ! _puCursor_enable ; }
-@@ -145,11 +174,49 @@
+@@ -145,11 +186,49 @@
  {
    _puCursor_x = x ;
    _puCursor_y = y ;
@@ -1335,7 +1376,7 @@
    glColor4fv ( _puCursor_bgcolour ) ;  
  
    glBegin    ( GL_TRIANGLES ) ;
-@@ -220,6 +287,12 @@
+@@ -220,6 +299,12 @@
    }
  }
  
@@ -1348,7 +1389,7 @@
  
  static puObject *active_widget ;   /* Widget which is currently receiving user input */
  static char *input_paste_buffer ;  /* Cut/Copy/Paste buffer for input widgets */
-@@ -244,7 +317,7 @@
+@@ -244,7 +329,7 @@
      input_paste_buffer = NULL ;
  
      firsttime = FALSE ;
@@ -1357,7 +1398,7 @@
  
      /* Create bitmaps for the device context font's first 256 glyphs */
  
-@@ -280,84 +353,25 @@
+@@ -280,84 +365,25 @@
    }
  }
  
@@ -1459,7 +1500,7 @@
  
  
  int puKeyboard ( int key, int updown )
-@@ -378,9 +392,9 @@
+@@ -378,9 +404,9 @@
    int h = puGetWindowHeight () ;
    
    if ( updown == PU_DOWN )
@@ -1473,18 +1514,22 @@
      updown, x, h - y ) ;
 --- a/src/pui/pu.h
 +++ b/src/pui/pu.h
-@@ -26,6 +26,10 @@
+@@ -26,6 +26,14 @@
  
  #include "sg.h"
  #include "fnt.h"
 +#ifdef MEGUSTA_PUI_FNT
 +// Target platform window service; no GLUT or system bitmap fonts.
++#if defined(_WIN32)
 +void puSetNativeWindow ( HWND window ) ;
++#else
++void puSetNativeWindow ( void *window ) ;
++#endif
 +#endif
  
  /*
    Configuration
-@@ -35,7 +39,9 @@
+@@ -35,7 +43,9 @@
  #define _PU_USE_GLUT   1
  #endif
  
@@ -1494,7 +1539,7 @@
  
  /*
    Include GLUT
-@@ -70,7 +76,7 @@
+@@ -70,7 +80,7 @@
  #define puSetDefaultColorScheme puSetDefaultColourScheme
  #define puGetDefaultColorScheme puGetDefaultColourScheme
  
@@ -1503,7 +1548,7 @@
  
  typedef void *puFont ;
  
-@@ -105,6 +111,8 @@
+@@ -105,6 +115,8 @@
  
    puFont ()
    {
@@ -1512,7 +1557,7 @@
  #ifdef _PU_USE_GLUT_FONTS
      glut_font_handle = GLUT_BITMAP_8_BY_13 ;
  #endif
-@@ -138,6 +146,7 @@
+@@ -138,6 +150,7 @@
  } ;
  
  
@@ -1520,7 +1565,7 @@
  extern puFont PUFONT_8_BY_13        ;
  extern puFont PUFONT_9_BY_15        ;
  extern puFont PUFONT_TIMES_ROMAN_10 ;
-@@ -151,6 +160,14 @@
+@@ -151,6 +164,14 @@
  #define PU_RIGHT_BUTTON     GLUT_RIGHT_BUTTON
  #define PU_DOWN             GLUT_DOWN
  #define PU_UP               GLUT_UP
@@ -1535,7 +1580,7 @@
  
  #endif
  
-@@ -358,8 +375,14 @@
+@@ -358,8 +379,14 @@
  
  
  void  puInit           ( void ) ;
@@ -1551,7 +1596,7 @@
  int   puMouse          ( int button, int updown, int x, int y ) ;
  int   puMouse          ( int x, int y ) ;
  int   puKeyboard       ( int key, int updown ) ;
-@@ -452,6 +475,8 @@
+@@ -452,6 +479,8 @@
  
    void setValue ( int   i ) { integer = i ; floater = (float) i ; sprintf ( string, "%d", i ) ; update_res() ; puRefresh = TRUE ; }
    void setValue ( float f ) { integer = (int) f ; floater = f ; sprintf ( string, "%g", f ) ; update_res() ; puRefresh = TRUE ; }
@@ -1560,7 +1605,7 @@
    void setValue ( char *s ) { 
                                if ( s == NULL || s[0] == '\0' )
                                {
-@@ -483,7 +508,7 @@
+@@ -483,7 +512,7 @@
  } ;
  
  typedef void (*puCallback)(class puObject *) ;
@@ -1569,7 +1614,7 @@
  
  void puSetDefaultStyle ( int  style ) ;
  int  puGetDefaultStyle ( void ) ;
-@@ -513,9 +538,12 @@
+@@ -513,9 +542,12 @@
    int highlighted ;
    int am_default  ;
    int window ;        /* Which window does the object appear in? */
@@ -1583,7 +1628,7 @@
  
    void *user_data ;
    puCallback cb ;
-@@ -540,6 +568,8 @@
+@@ -540,6 +572,8 @@
  
    puObject *next ;
    puObject *prev ;
@@ -1592,7 +1637,7 @@
   
    puBox *getBBox ( void ) { return & bbox ; }
    puBox *getABox ( void ) { return & abox ; }
-@@ -621,7 +651,7 @@
+@@ -621,7 +655,7 @@
    void       setRenderCallback ( puRenderCallback c, void *d = NULL ) { r_cb = c ; render_data = d ; }
    puRenderCallback getRenderCallback ( void ) { return r_cb ; }
    void      *getRenderCallbackData ( void ) { return render_data ; }
@@ -1601,7 +1646,7 @@
  
    void  makeReturnDefault ( int def ) { am_default = def ; }
    int   isReturnDefault   ( void )          { return am_default ; }
-@@ -637,9 +667,6 @@
+@@ -637,9 +671,6 @@
  
    void  setLegendFont ( puFont f ) { legendFont = f ; recalc_bbox() ; puRefresh = TRUE ; }
    puFont getLegendFont ( void ) { return legendFont ; }
@@ -1611,7 +1656,7 @@
  
    void  setLabel ( const char *l ) { label = l ; recalc_bbox() ; puRefresh = TRUE ; }
    const char *getLabel ( void ) const { return label ; }
-@@ -727,14 +754,7 @@
+@@ -727,14 +758,7 @@
    int num_children ;
    puObject *dlist ;
  
@@ -1626,7 +1671,7 @@
  
  public:
  
-@@ -743,10 +763,6 @@
+@@ -743,10 +767,6 @@
      type |= PUCLASS_GROUP ;
      dlist = NULL ;
      num_children = 0 ;
@@ -1637,7 +1682,7 @@
      puPushGroup ( this ) ;
    }
  
-@@ -767,13 +783,15 @@
+@@ -767,13 +787,15 @@
    virtual void close ( void )
    {
      if ( puGetCurrGroup () != this )
@@ -1656,7 +1701,7 @@
  } ;
  
  
-@@ -1140,7 +1158,7 @@
+@@ -1140,7 +1162,7 @@
                         + PUSTR_TGAP + PUSTR_BGAP ) : y)
    {
      type |= PUCLASS_VERTMENU ;
@@ -1665,7 +1710,7 @@
    }
  
    void add_submenu ( char *str, char *items[], puCallback cb[] ) ;
-@@ -1148,13 +1166,14 @@
+@@ -1148,13 +1170,14 @@
  } ;
  
  
@@ -1681,7 +1726,7 @@
  
    void normalize_cursors ( void ) ;
    void removeSelectRegion ( void ) ;
-@@ -1189,40 +1208,6 @@
+@@ -1189,40 +1212,6 @@
      if ( e ) *e = select_end_position   ;
    }
  
@@ -1722,7 +1767,7 @@
    puInput ( int minx, int miny, int maxx, int maxy ) :
               puObject ( minx, miny, maxx, maxy )
    {
-@@ -1234,21 +1219,11 @@
+@@ -1234,21 +1223,11 @@
      select_start_position = -1 ;
      select_end_position   = -1 ;
  
@@ -3214,7 +3259,35 @@
 +};
 --- a/src/ssg/ssg.cxx
 +++ b/src/ssg/ssg.cxx
-@@ -101,10 +101,7 @@
+@@ -24,8 +24,11 @@
+ 
+ #define _UL_GENERATE_CODE_
+ #include "ssgLocal.h"
+-
+-#ifndef WIN32
++#if defined(MEGUSTA_SDL) && !defined(__EMSCRIPTEN__)
++#include <SDL.h>
++#endif
++
++#if !defined(WIN32) && !defined(__EMSCRIPTEN__) && !defined(MEGUSTA_SDL)
+ #  ifndef macintosh
+ #    include <GL/glx.h>
+ #  else
+@@ -37,8 +40,13 @@
+ {
+ #if defined(CONSOLE)
+   return true ;
++#elif defined(__EMSCRIPTEN__)
++  // SDL owns the WebGL context in the browser runtime; PLIB has no GLX handle.
++  return true ;
+ #elif defined(WIN32)
+   return ( wglGetCurrentContext () != NULL ) ;
++#elif defined(MEGUSTA_SDL)
++  return SDL_GL_GetCurrentContext() != NULL;
+ #elif defined(macintosh)
+   return ( aglGetCurrentContext() != NULL ) ;
+ #else
+@@ -101,10 +109,7 @@
  
  void ssgInit ()
  {
@@ -3226,7 +3299,7 @@
  
    ssgTexturePath ( "." ) ;
    ssgModelPath   ( "." ) ;
-@@ -120,74 +117,10 @@
+@@ -120,74 +125,10 @@
  
    new ssgContext ;  /* Sets the current context with defaults */
  
@@ -3305,7 +3378,7 @@
  
  
  void ssgCullAndPick ( ssgRoot *r, sgVec2 botleft, sgVec2 topright )
-@@ -244,13 +177,16 @@
+@@ -244,13 +185,16 @@
  }
  
  
@@ -3323,7 +3396,7 @@
    ssgForceBasicState () ;
  
    glMatrixMode ( GL_PROJECTION ) ;
-@@ -266,7 +202,7 @@
+@@ -266,7 +210,7 @@
        _ssgLights [ i ] . setup () ;
  
    _ssgCurrentContext->loadModelviewMatrix () ;
@@ -3332,7 +3405,7 @@
  
    for ( i = 0 ; i < 8 ; i++ )
      if ( ! _ssgLights [ i ] . isHeadlight () )
-@@ -275,11 +211,12 @@
+@@ -275,11 +219,12 @@
    _ssgCurrentContext->cull(r) ;
    _ssgDrawDList () ;
  
@@ -3346,7 +3419,7 @@
    _ssgFrameCounter++ ;
  }
  
-@@ -316,6 +253,9 @@
+@@ -316,6 +261,9 @@
  
  
  
@@ -3356,7 +3429,7 @@
  static ssgBase *createBase ()              { return new ssgBase             ; }
  
  //static ssgBase *createEntity ()            { return new ssgEntity           ; }
-@@ -438,3 +378,4 @@
+@@ -438,3 +386,4 @@
  
    return obj ;
  }

@@ -2,6 +2,9 @@
 #include "gl_token_table.h"
 #include <GL/gl.h>
 #include <cstring>
+#if defined(MEGUSTA_SDL) && !defined(__EMSCRIPTEN__)
+#include <SDL.h>
+#endif
 namespace megusta {
 OpenGLAdapter::OpenGLAdapter(const Win32GLTokenTable& table):tokens(table.values) {}
 void OpenGLAdapter::shadeModel(int n) { glShadeModel(tokens[n]); }
@@ -77,6 +80,9 @@ void OpenGLAdapter::loadMultitextureFunctions() {
     if (!activeTextureFunction)
         activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glActiveTexture"));
     clientActiveTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glClientActiveTextureARB"));
+#elif defined(MEGUSTA_SDL)
+    activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(SDL_GL_GetProcAddress("glActiveTexture"));
+    clientActiveTextureFunction=reinterpret_cast<GLActiveTextureProc>(SDL_GL_GetProcAddress("glClientActiveTexture"));
 #endif
 }
 }

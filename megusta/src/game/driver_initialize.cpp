@@ -88,7 +88,7 @@ void Driver::initialize(DriverInitialization& s) {
     puInit();
 #ifdef _WIN32
     puSetNativeWindow(static_cast<HWND>(s.callbacks.runtime.nativeWindowHandle()));
-#elif defined(__EMSCRIPTEN__)
+#elif defined(MEGUSTA_SDL)
     puSetNativeWindow(nullptr);
     puSetWindowSize(s.callbacks.runtime.state.width,s.callbacks.runtime.state.height);
 #endif

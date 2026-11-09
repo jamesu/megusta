@@ -1,8 +1,8 @@
 #include "game_application.h"
 #include "game/driver_initialize.h"
 #include "game/application_input.h"
-#ifdef __EMSCRIPTEN__
-#include "game/browser_startup_host.h"
+#ifdef MEGUSTA_SDL
+#include "platform/sdl/startup_host.h"
 #else
 #include "game/win32_startup_host.h"
 #endif
@@ -28,6 +28,8 @@
 #include "game/hole_render_backend.h"
 #ifdef __EMSCRIPTEN__
 #include "platform/browser.h"
+#elif defined(MEGUSTA_SDL)
+#include "platform/sdl/sdl_runtime.h"
 #else
 #include "platform/win32.h"
 #endif
@@ -53,6 +55,8 @@ struct Application {
     inline static const char* const wireModeNames[7]={"grid","object","object face","collidable objects","all objects","flagged objects","grid"};
 #ifdef __EMSCRIPTEN__
     platform::BrowserRuntime platform;
+#elif defined(MEGUSTA_SDL)
+    platform::SdlRuntime platform;
 #else
     platform::Win32Runtime platform;
 #endif
@@ -158,10 +162,10 @@ struct Application {
     DriverInitialization initialization{config,startup,gameConsole,gameHoleClock,gameBalls,putter,guide,gameInputState,
         gamePlayers,random,fluffRandom,guiFonts.primary,guiFonts.console,guiFonts.secondary,widgets,resources,sounds,
         gui,guiState,sceneLoading,powerState,shapes,softwareCursorTexture,{},variables,client,callbacks,this,installExit,selectLoader};
-#ifdef __EMSCRIPTEN__
-    BrowserStartupHostContext startupContext{platform,driverAutorun,autorun,cameraState,startup.preferences.textureDepth,
+#ifdef MEGUSTA_SDL
+    SdlStartupHostContext startupContext{platform,driverAutorun,autorun,cameraState,startup.preferences.textureDepth,
         startup.preferences.textureLimitIndex,startup.preferences.vsyncMode};
-    StartupServices host=makeBrowserStartupServices(startupContext);
+    StartupServices host=makeSdlStartupServices(startupContext);
 #else
     Win32StartupHostContext startupContext{platform,driverAutorun,autorun,cameraState,startup.preferences.textureDepth,
         startup.preferences.textureLimitIndex,startup.preferences.vsyncMode};
@@ -383,7 +387,7 @@ struct Application {
 }
 void runGameApplication(void* instance,int argc,char** argv) {
     Application application(argc,argv);
-#ifdef __EMSCRIPTEN__
+#ifdef MEGUSTA_SDL
     (void)instance;
     gameRuntimeStartupBridge(argc,argv);
 #else

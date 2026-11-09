@@ -1,8 +1,8 @@
-#include "browser_startup_host.h"
-#ifdef __EMSCRIPTEN__
+#include "startup_host.h"
+#ifdef MEGUSTA_SDL
 namespace megusta {
 namespace {
-BrowserStartupHostContext& host(void* value) { return *static_cast<BrowserStartupHostContext*>(value); }
+SdlStartupHostContext& host(void* value) { return *static_cast<SdlStartupHostContext*>(value); }
 void launchConfiguration(void*,const char*) {}
 void configureAutorun(void* value,int menuSeconds,int gameSeconds,bool startNow) {
     auto& s=host(value);
@@ -19,7 +19,7 @@ void applyPreferences(void* value,const StartupPreferences& preferences) {
 }
 int playMovie(void*,const char*,int,int,int,int,int) { return 1; }
 }
-StartupServices makeBrowserStartupServices(BrowserStartupHostContext& context) {
+StartupServices makeSdlStartupServices(SdlStartupHostContext& context) {
     StartupServices services{};
     services.context=&context;
     services.shellConfig=launchConfiguration;

@@ -1,5 +1,5 @@
-#include "win32.h"
-#include "../engine/runtime_adapters.h"
+#include "win32_runtime.h"
+#include "engine/runtime_adapters.h"
 #ifdef _WIN32
 #define DIRECTINPUT_VERSION 0x0700
 #include <windows.h>

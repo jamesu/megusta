@@ -4,14 +4,22 @@
 #include <windows.h>
 #endif
 #include <GL/gl.h>
+#ifndef APIENTRY
+#define APIENTRY
+#endif
 #include <cstring>
 #include <stdexcept>
+#if defined(MEGUSTA_SDL) && !defined(__EMSCRIPTEN__)
+#include <SDL.h>
+#endif
 namespace megusta {
 namespace {
 void* resolve(const char* name,void* (*host)(const char*)) {
     if (host) return host(name);
 #ifdef _WIN32
     return reinterpret_cast<void*>(wglGetProcAddress(name));
+#elif defined(MEGUSTA_SDL) && !defined(__EMSCRIPTEN__)
+    return SDL_GL_GetProcAddress(name);
 #else
     throw std::runtime_error("GL extension procedure resolver is not bound for this platform");
 #endif
@@ -24,6 +32,10 @@ void initializeExtensionsAndSwapInterval(OpenGLAdapter& gl,GLSetupState& state,
     if (state.hintHook) state.hintHook(state.lastHintTarget,state.lastHintMode);
     gl.loadMultitextureFunctions();
     if (state.swapInterval<0) return;
+#if defined(MEGUSTA_SDL) && !defined(__EMSCRIPTEN__)
+    SDL_GL_SetSwapInterval(state.swapInterval!=0);
+    return;
+#endif
     const char* extensions=reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
     if (extensions && std::strstr(extensions,"WGL_EXT_swap_control")) {
         using SwapInterval=int (APIENTRY*)(int);

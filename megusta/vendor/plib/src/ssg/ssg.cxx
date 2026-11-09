@@ -24,8 +24,11 @@
 
 #define _UL_GENERATE_CODE_
 #include "ssgLocal.h"
+#if defined(MEGUSTA_SDL) && !defined(__EMSCRIPTEN__)
+#include <SDL.h>
+#endif
 
-#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__) && !defined(MEGUSTA_SDL)
 #  ifndef macintosh
 #    include <GL/glx.h>
 #  else
@@ -42,6 +45,8 @@ static bool glIsValidContext ()
   return true ;
 #elif defined(WIN32)
   return ( wglGetCurrentContext () != NULL ) ;
+#elif defined(MEGUSTA_SDL)
+  return SDL_GL_GetCurrentContext() != NULL;
 #elif defined(macintosh)
   return ( aglGetCurrentContext() != NULL ) ;
 #else

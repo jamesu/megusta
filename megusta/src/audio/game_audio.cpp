@@ -16,6 +16,9 @@ const OpenALApi& api() {
 #elif defined(MEGUSTA_AUDIO_DEFAULT_BROWSER)
     extern const OpenALApi& browserWebAudioApi();
     return selectedApi ? *selectedApi : browserWebAudioApi();
+#elif defined(MEGUSTA_AUDIO_DEFAULT_NATIVE)
+    extern const OpenALApi& nativeOpenALApi();
+    return selectedApi ? *selectedApi : nativeOpenALApi();
 #else
     return *selectedApi; // External-backend builds require bindApi before use.
 #endif

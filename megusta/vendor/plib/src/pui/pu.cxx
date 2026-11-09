@@ -22,12 +22,12 @@
 */
 
 #include "puLocal.h"
-#ifdef __EMSCRIPTEN__
-#include <SDL2/SDL.h>
+#ifdef MEGUSTA_SDL
+#include <SDL.h>
 #define timeGetTime SDL_GetTicks
 #endif
 
-#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
+#if !defined(WIN32) && !defined(MEGUSTA_SDL)
 #  ifndef macintosh
 #    include <GL/glx.h>
 #  else

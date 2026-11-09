@@ -19,20 +19,20 @@ endfunction()
 
 
 
-add_library(megusta_platform STATIC src/platform/runtime.cpp)
+add_library(megusta_platform STATIC src/platform/runtime.cpp src/platform/headless/headless_runtime.cpp)
 target_include_directories(megusta_platform PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_compile_features(megusta_platform PUBLIC cxx_std_17)
 if(EMSCRIPTEN)
   target_compile_definitions(megusta_platform PUBLIC MEGUSTA_PORTABLE_NUMERIC=1)
 endif()
 if(WIN32)
-  target_sources(megusta_platform PRIVATE src/platform/win32.cpp)
+  target_sources(megusta_platform PRIVATE src/platform/windows/win32_runtime.cpp)
   # DirectInput is loaded dynamically by win32.cpp (DINPUT.DLL/GetProcAddress),
   # so there is no import library dependency. dxguid supplies the COM IIDs.
   target_link_libraries(megusta_platform PUBLIC user32 gdi32 opengl32 winmm dxguid)
 elseif(EMSCRIPTEN AND MEGUSTA_BROWSER)
-  target_sources(megusta_platform PRIVATE src/platform/browser.cpp)
-  target_compile_definitions(megusta_platform PUBLIC MEGUSTA_BROWSER=1)
+  target_sources(megusta_platform PRIVATE src/platform/sdl/sdl_runtime.cpp src/platform/browser/browser_runtime.cpp)
+  target_compile_definitions(megusta_platform PUBLIC MEGUSTA_BROWSER=1 MEGUSTA_SDL=1)
   target_compile_options(megusta_platform PUBLIC "-sUSE_SDL=2")
   target_link_options(megusta_platform PUBLIC "-sUSE_SDL=2")
   target_link_options(megusta_platform PUBLIC "-sMIN_WEBGL_VERSION=1" "-sMAX_WEBGL_VERSION=1")
@@ -40,6 +40,12 @@ elseif(EMSCRIPTEN AND MEGUSTA_BROWSER)
   megusta_platform_use_gl4es(megusta_platform)
   # PLIB/SSG and the recovered renderer use the desktop fixed-function GL
   # interface. Emscripten translates this subset to WebGL for the browser.
+elseif(MEGUSTA_NATIVE_SDL)
+  find_package(SDL2 REQUIRED CONFIG)
+  find_package(OpenGL REQUIRED)
+  target_sources(megusta_platform PRIVATE src/platform/sdl/sdl_runtime.cpp)
+  target_compile_definitions(megusta_platform PUBLIC MEGUSTA_SDL=1 MEGUSTA_PORTABLE_NUMERIC=1)
+  target_link_libraries(megusta_platform PUBLIC SDL2::SDL2 OpenGL::GL)
 endif()
 if(NOT MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
   target_compile_options(megusta_platform PRIVATE -fno-fast-math -ffp-contract=off)

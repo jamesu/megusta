@@ -60,7 +60,7 @@ void stream(Handle buffer,ResourceFile* file) {
     if(data) { alBufferData(buffer,format,data,bytes,rate);std::free(data); }
 }
 }
-const OpenALApi& browserOpenALApi() {
+const OpenALApi& nativeOpenALApi() {
     static const OpenALApi table{
         initialize,shutdownBackend,[](Diagnostic){},[](float value){scale=value;},
         [](int name,float value){if(name!=CommitDeferred)alListenerf(token(name),value);},

@@ -1,10 +1,10 @@
 #pragma once
-#ifdef __EMSCRIPTEN__
-#include "startup.h"
-#include "driver.h"
-#include "camera.h"
+#ifdef MEGUSTA_SDL
+#include "game/startup.h"
+#include "game/driver.h"
+#include "game/camera.h"
 namespace megusta {
-struct BrowserStartupHostContext {
+struct SdlStartupHostContext {
     platform::Runtime& platform;
     DriverAutorun& autorun;
     DriverAutorunServices& autorunServices;
@@ -13,6 +13,6 @@ struct BrowserStartupHostContext {
     int& textureLimit;
     int& verticalSync;
 };
-StartupServices makeBrowserStartupServices(BrowserStartupHostContext&);
+StartupServices makeSdlStartupServices(SdlStartupHostContext&);
 }
 #endif

@@ -12,8 +12,10 @@ extern void initoperator(void);
 extern void initregex(void);
 extern void initrotor(void);
 extern void initsha(void);
-#ifndef __EMSCRIPTEN__
+#ifdef _WIN32
 extern void init_socket(void);
+#elif !defined(__EMSCRIPTEN__)
+extern void initsocket(void);
 #endif
 extern void initsoundex(void);
 extern void initstrop(void);
@@ -36,8 +38,10 @@ struct _inittab _PyImport_Inittab[] = {
     {"regex", initregex},
     {"rotor", initrotor},
     {"sha", initsha},
-#ifndef __EMSCRIPTEN__
+#ifdef _WIN32
     {"_socket", init_socket},
+#elif !defined(__EMSCRIPTEN__)
+    {"socket", initsocket},
 #endif
     {"soundex", initsoundex},
     {"strop", initstrop},
