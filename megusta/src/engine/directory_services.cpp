@@ -1,4 +1,5 @@
 #include "directory_services.h"
+#include "case_insensitive_path.h"
 #include "../game/config_literals.h"
 #include <cstring>
 #include <cstdio>
@@ -26,9 +27,12 @@ EngineDirectoryIterator* EngineDirectoryIterator::open(const char* path) {
         if (!wildcard) wildcard = std::strrchr(search, '\\');
         if (wildcard) *wildcard = 0;
         else std::strcpy(search, ".");
-        std::strncpy(iterator->directory_, search, sizeof(iterator->directory_)-1);
-        iterator->findHandle_ = opendir(search);
+        std::string resolvedDirectory;
+        iterator->findHandle_ = engine_filesystem::openDirectoryCaseInsensitive(
+            search, &resolvedDirectory);
         if (!iterator->findHandle_) { delete iterator; return nullptr; }
+        std::strncpy(iterator->directory_, resolvedDirectory.c_str(),
+                     sizeof(iterator->directory_)-1);
 #endif
     }
     return iterator;
@@ -54,7 +58,9 @@ char* EngineDirectoryIterator::nextName() {
     if (entry->d_type == DT_UNKNOWN) {
         char path[512];
         std::snprintf(path, sizeof(path), "%s/%s", directory_, entry->d_name);
-        currentIsDirectory_ = stat(path, &status) == 0 && S_ISDIR(status.st_mode);
+        std::string resolvedPath;
+        currentIsDirectory_ = engine_filesystem::resolvePathCaseInsensitive(path, resolvedPath) &&
+            stat(resolvedPath.c_str(), &status) == 0 && S_ISDIR(status.st_mode);
     }
 #endif
     return name_;

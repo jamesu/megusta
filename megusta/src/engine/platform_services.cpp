@@ -1,4 +1,5 @@
 #include "platform_services.h"
+#include "case_insensitive_path.h"
 #include <cstdio>
 #include <cstdio>
 #include <cstring>
@@ -28,8 +29,10 @@ int engineFile_queryStat_impl(const char* path,FileStatus* status) {
     status->modificationTime=static_cast<std::int32_t>(native.st_mtime);
     status->kindFlags=(mode&_S_IFDIR) ? 1 : (mode&_S_IFREG) ? 2 : 0;
 #else
+    std::string resolvedPath;
+    if (!engine_filesystem::resolvePathCaseInsensitive(path, resolvedPath)) return -1;
     struct stat native{};
-    if (stat(path,&native)!=0) return -1;
+    if (stat(resolvedPath.c_str(),&native)!=0) return -1;
     status->byteCount=static_cast<std::int32_t>(native.st_size);
     status->modificationTime=static_cast<std::int32_t>(native.st_mtime);
     status->kindFlags=S_ISDIR(native.st_mode) ? 1 : S_ISREG(native.st_mode) ? 2 : 0;

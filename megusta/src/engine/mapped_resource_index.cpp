@@ -1,4 +1,5 @@
 #include "mapped_resource_index.h"
+#include "case_insensitive_path.h"
 #include <cstdlib>
 #include <cstring>
 #include <sys/stat.h>
@@ -43,16 +44,18 @@ void MappedResourceIndex::release() noexcept {
 // Original 0044d2b0. Preserve its low-32-bit file sizing and header checks.
 bool MappedResourceIndex::open(const char* path) {
     release();
+    std::string resolvedPath;
+    if (!engine_filesystem::resolvePathCaseInsensitive(path, resolvedPath)) return false;
 #if defined(_WIN32)
     struct _stat status = {};
-    _stat(path, &status);
+    _stat(resolvedPath.c_str(), &status);
 #else
     struct stat status = {};
-    stat(path, &status);
+    stat(resolvedPath.c_str(), &status);
 #endif
     modificationTime_ = static_cast<std::int32_t>(status.st_mtime);
 #if defined(_WIN32)
-    fileHandle_ = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, nullptr,
+    fileHandle_ = CreateFileA(resolvedPath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (fileHandle_ != INVALID_HANDLE_VALUE) {
         DWORD high;
@@ -79,7 +82,7 @@ bool MappedResourceIndex::open(const char* path) {
         }
     }
 #else
-    FILE* file = std::fopen(path, "rb");
+    FILE* file = std::fopen(resolvedPath.c_str(), "rb");
     if (file) {
         if (std::fseek(file, 0, SEEK_END) == 0) {
             const long length = std::ftell(file);

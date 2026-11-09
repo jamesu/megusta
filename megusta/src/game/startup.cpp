@@ -3,6 +3,7 @@
 #include "audio/openal.h"
 #include "engine/movie_playback.h"
 #include "startup_literals.h"
+#include "engine/case_insensitive_path.h"
 #include <cstdlib>
 #include <cstdio>
 #include <stdexcept>
@@ -47,12 +48,17 @@ int runGameStartup(int argc,char** argv,ResourceRuntime& resources,GameConfig& c
         !host.applyPreferences)
         throw std::logic_error("Game startup requires unresolved native service bindings");
     struct stat status{};
-    if (::stat("MINIGOLF.CFG",&status)!=0)
+    std::string configPath;
+    if (!engine_filesystem::resolvePathCaseInsensitive("MINIGOLF.CFG", configPath) ||
+        ::stat(configPath.c_str(),&status)!=0)
         host.shellConfig(host.context,"MinigolfConfig.exe");
     resources.initializeFromArgs(argc,argv);
     auto& mounts=resources.mounts();
     static const struct { const char* prefix; const char* path; } fixedMounts[]={
-        {"data/","base"},{"data/","scripts.rbx"},{"data/AI/","AI.rbx"},
+        {"data/","base"},{"data/","scripts.rbx"},
+        // Emscripten's preloaded filesystem is case-sensitive; the shipped
+        // archive is named ai.rbx (Windows accepts either spelling).
+        {"data/AI/","ai.rbx"},
         {"data/announce/","announce.rbx"},{"data/coins/","coins.rbx"},
         {"data/fonts/","fonts.rbx"},{"data/shapes/","shapes.rbx"},
         {"data/sounds/","sounds.rbx"},{"data/textures/","textures.rbx"},

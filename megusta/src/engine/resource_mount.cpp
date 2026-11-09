@@ -1,4 +1,5 @@
 #include "resource_mount.h"
+#include "case_insensitive_path.h"
 #include "string_services.h"
 #include <cstring>
 #include <cstdio>
@@ -10,12 +11,14 @@ namespace {
 // 0052ce70: shared transient path buffer, overwritten on each directory match.
 char translatedPath[256];
 int queryNativeStat(const char* path, ResourceStatus& result) {
+    std::string resolved;
+    if (!engine_filesystem::resolvePathCaseInsensitive(path, resolved)) return -1;
 #if defined(_WIN32)
     struct _stat native;
-    if (_stat(path, &native) != 0) return -1;
+    if (_stat(resolved.c_str(), &native) != 0) return -1;
 #else
     struct stat native;
-    if (stat(path, &native) != 0) return -1;
+    if (stat(resolved.c_str(), &native) != 0) return -1;
 #endif
     result.byteCount = static_cast<std::int32_t>(native.st_size);
     result.modificationTime = static_cast<std::int32_t>(native.st_mtime);
@@ -57,7 +60,7 @@ std::unique_ptr<ResourceFile> ResourceMountTable::open(const char* path, const c
         const char* translated = mount.translatePrefix(path);
         if (!translated) continue;
         if (!mount.archive) {
-            if (auto* file = std::fopen(translated, mode))
+            if (auto* file = engine_filesystem::openFileCaseInsensitive(translated, mode))
                 return std::unique_ptr<ResourceFile>(new ResourceFile(file));
         } else if (std::strchr(mode, 'r')) {
             const void* data;
