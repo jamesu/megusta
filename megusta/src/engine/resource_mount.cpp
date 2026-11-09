@@ -10,11 +10,16 @@ namespace {
 // 0052ce70: shared transient path buffer, overwritten on each directory match.
 char translatedPath[256];
 int queryNativeStat(const char* path, ResourceStatus& result) {
+#if defined(_WIN32)
     struct _stat native;
     if (_stat(path, &native) != 0) return -1;
+#else
+    struct stat native;
+    if (stat(path, &native) != 0) return -1;
+#endif
     result.byteCount = static_cast<std::int32_t>(native.st_size);
     result.modificationTime = static_cast<std::int32_t>(native.st_mtime);
-    result.kindFlags = (native.st_mode & _S_IFDIR) ? 1 : (native.st_mode & _S_IFREG) ? 2 : 0;
+    result.kindFlags = S_ISDIR(native.st_mode) ? 1 : S_ISREG(native.st_mode) ? 2 : 0;
     return 0;
 }
 }

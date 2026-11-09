@@ -1,7 +1,11 @@
-#include "win32_game_application.h"
+#include "game_application.h"
 #include "game/driver_initialize.h"
 #include "game/application_input.h"
+#ifdef __EMSCRIPTEN__
+#include "game/browser_startup_host.h"
+#else
 #include "game/win32_startup_host.h"
+#endif
 #include "game/putt_map_runtime.h"
 #include "game/putt_map_io.h"
 #include "game/gui_render.h"
@@ -13,6 +17,7 @@
 #include "game/random.h"
 #include "game/shape_sequence_names.h"
 #include "dts/graphics_state.h"
+#include "dts/mesh.h"
 #include "game/effect.h"
 #include "game/hud.h"
 #include "game/spatial_editor.h"
@@ -21,7 +26,11 @@
 #include "engine/multi_texture.h"
 #include <memory>
 #include "game/hole_render_backend.h"
+#ifdef __EMSCRIPTEN__
+#include "platform/browser.h"
+#else
 #include "platform/win32.h"
+#endif
 #include "engine/gl_token_table.h"
 #include "bindings/game_variables.h"
 #include "bindings/gameplay.h"
@@ -42,7 +51,11 @@ namespace {
 struct Application {
     inline static Application* active=nullptr;
     inline static const char* const wireModeNames[7]={"grid","object","object face","collidable objects","all objects","flagged objects","grid"};
+#ifdef __EMSCRIPTEN__
+    platform::BrowserRuntime platform;
+#else
     platform::Win32Runtime platform;
+#endif
     ResourceRuntime resources;
     StartupState startup;
     AudioCategoryGains gains{1,1,1,1,1};
@@ -145,11 +158,23 @@ struct Application {
     DriverInitialization initialization{config,startup,gameConsole,gameHoleClock,gameBalls,putter,guide,gameInputState,
         gamePlayers,random,fluffRandom,guiFonts.primary,guiFonts.console,guiFonts.secondary,widgets,resources,sounds,
         gui,guiState,sceneLoading,powerState,shapes,softwareCursorTexture,{},variables,client,callbacks,this,installExit,selectLoader};
+#ifdef __EMSCRIPTEN__
+    BrowserStartupHostContext startupContext{platform,driverAutorun,autorun,cameraState,startup.preferences.textureDepth,
+        startup.preferences.textureLimitIndex,startup.preferences.vsyncMode};
+    StartupServices host=makeBrowserStartupServices(startupContext);
+#else
     Win32StartupHostContext startupContext{platform,driverAutorun,autorun,cameraState,startup.preferences.textureDepth,
         startup.preferences.textureLimitIndex,startup.preferences.vsyncMode};
     StartupServices host=makeWin32StartupServices(startupContext);
+#endif
     GameEntryServices entry;
     Application(int argc,char** argv):entry{resources,config,driverViewport,platform,startup,initialization,host,argc,argv} {
+#ifdef __EMSCRIPTEN__
+        // WebGL has no display-list backend. Keep the recovered immediate
+        // rendering branches active for DTS meshes and their skin updates.
+        dts::dtsDisplayListsEnabled=false;
+        dts::dtsSkinDisplayListsEnabled=false;
+#endif
         configurePutterResources();
         guiState.scriptServices=&scripts;
         active=this;
@@ -356,8 +381,13 @@ struct Application {
     static void driverDispatchJoystick(void* p) { app(p).platform.dispatchJoystick(); }
 };
 }
-void runWin32GameApplication(void* instance,int argc,char** argv) {
+void runGameApplication(void* instance,int argc,char** argv) {
     Application application(argc,argv);
+#ifdef __EMSCRIPTEN__
+    (void)instance;
+    gameRuntimeStartupBridge(argc,argv);
+#else
     engineRuntimeWinMainBootstrap(instance);
+#endif
 }
 }

@@ -25,7 +25,7 @@
 #define _UL_GENERATE_CODE_
 #include "ssgLocal.h"
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #  ifndef macintosh
 #    include <GL/glx.h>
 #  else
@@ -36,6 +36,9 @@
 static bool glIsValidContext ()
 {
 #if defined(CONSOLE)
+  return true ;
+#elif defined(__EMSCRIPTEN__)
+  // SDL owns the WebGL context in the browser runtime; PLIB has no GLX handle.
   return true ;
 #elif defined(WIN32)
   return ( wglGetCurrentContext () != NULL ) ;

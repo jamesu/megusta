@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <string>
 #include <stdexcept>
 namespace megusta {
 void Driver::executePython(const char* command) { PyRun_SimpleString(const_cast<char*>(command)); }

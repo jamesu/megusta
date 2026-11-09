@@ -22,8 +22,12 @@
 */
 
 #include "puLocal.h"
+#ifdef __EMSCRIPTEN__
+#include <SDL2/SDL.h>
+#define timeGetTime SDL_GetTicks
+#endif
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #  ifndef macintosh
 #    include <GL/glx.h>
 #  else
@@ -46,11 +50,19 @@ static int openGLSize = 0 ;
 
 #ifdef MEGUSTA_PUI_FNT
 // MG-PLIB-011: native client rectangle replaces the game window provider.
+ #if defined(WIN32)
 static HWND puNativeWindow = NULL ;
 void puSetNativeWindow ( HWND window ) { puNativeWindow = window ; }
 int puGetWindow () { return (int)(INT_PTR)puNativeWindow ; }
 int puGetWindowHeight () { RECT r ; return !openGLSize && puNativeWindow && GetClientRect(puNativeWindow,&r) ? r.bottom-r.top : puWindowHeight ; }
 int puGetWindowWidth () { RECT r ; return !openGLSize && puNativeWindow && GetClientRect(puNativeWindow,&r) ? r.right-r.left : puWindowWidth ; }
+#else
+static void* puNativeWindow = NULL ;
+void puSetNativeWindow ( void* window ) { puNativeWindow = window ; }
+int puGetWindow () { return 0 ; }
+int puGetWindowHeight () { return puWindowHeight ; }
+int puGetWindowWidth () { return puWindowWidth ; }
+#endif
 void puSetResizeMode ( int mode ) { openGLSize = mode ; }
 void puSetWindowSize ( int width, int height ) { puWindowWidth=width ; puWindowHeight=height ; }
 #elif defined(PU_NOT_USING_GLUT)

@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <emscripten.h>
 #include <GLES2/gl2.h>
+#include <gl4esinit.h>
 namespace megusta::platform {
 namespace {
 constexpr unsigned subsystems=SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK|SDL_INIT_TIMER;
@@ -29,6 +30,11 @@ bool BrowserRuntime::create(const char* title) {
     if (!window) { reportError(); shutdown(); return false; }
     context=SDL_GL_CreateContext(window);
     if (!context || SDL_GL_MakeCurrent(window,context)!=0) { reportError(); shutdown(); return false; }
+
+    #ifdef __EMSCRIPTEN__
+    initialize_gl4es();
+    #endif
+
     SDL_StartTextInput();
     state.created=state.active=running=true;
     // SDL's Emscripten port owns browser gesture/deferred-fullscreen handling.
@@ -129,6 +135,11 @@ void BrowserRuntime::shutdown() {
     running=false;
     if (loopStarted) { emscripten_cancel_main_loop(); loopStarted=false; }
     if (joystick) { SDL_JoystickClose(joystick); joystick=nullptr; }
+
+    #ifdef __EMSCRIPTEN__
+    close_gl4es();
+    #endif
+    
     if (context) { SDL_GL_DeleteContext(context); context=nullptr; }
     if (window) { SDL_DestroyWindow(window); window=nullptr; }
     if (initialized) { SDL_StopTextInput(); SDL_QuitSubSystem(subsystems); initialized=false; }

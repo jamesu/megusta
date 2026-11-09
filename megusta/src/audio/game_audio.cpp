@@ -2,6 +2,9 @@
 #include "../engine/resource_runtime.h"
 #include <cstdlib>
 #include <cstring>
+#if !defined(_WIN32)
+#include <strings.h>
+#endif
 namespace megusta { namespace audio {
 bool enabled=true;
 int requestedBits=16;
@@ -18,9 +21,18 @@ void shutdown() {
     if (enabled) { api().shutdown();api().setDiagnostic(nullptr); }
 }
 void initialize(int* argc,void* argvOrDiagnostic) {
+#ifdef MEGUSTA_AUDIO_NO_BACKEND
+    (void)argc; (void)argvOrDiagnostic; enabled=false; return;
+#endif
     if (argc && *argc>1) {
         const auto* argv=static_cast<const char* const*>(argvOrDiagnostic);
-        for (int i=1;i<*argc;++i) if (!_stricmp(argv[i],"-nosound")) { enabled=false;return; }
+        for (int i=1;i<*argc;++i) {
+#if defined(_WIN32)
+            if (!_stricmp(argv[i],"-nosound")) { enabled=false;return; }
+#else
+            if (!strcasecmp(argv[i],"-nosound")) { enabled=false;return; }
+#endif
+        }
     }
     if (requestedBits<1) enabled=false;
     if (!argc) api().setDiagnostic(reinterpret_cast<Diagnostic>(argvOrDiagnostic));

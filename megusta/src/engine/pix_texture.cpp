@@ -6,7 +6,6 @@
 #include "zlib.h"
 #include "resource_runtime.h"
 #include "reader_stream.h"
-#include <windows.h>
 #include <GL/gl.h>
 #include <vector>
 #include <algorithm>

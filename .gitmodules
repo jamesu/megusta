@@ -1,0 +1,3 @@
+[submodule "megusta/upstream/gl4es"]
+	path = megusta/upstream/gl4es
+	url = https://github.com/ptitSeb/gl4es.git

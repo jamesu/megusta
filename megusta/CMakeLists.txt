@@ -33,6 +33,30 @@ endif()
 set(MEGUSTA_ASSET_DIR "" CACHE PATH "External shipped asset directory; its top-level out directory is excluded")
 include(cmake/Assets.cmake)
 option(MEGUSTA_PLATFORM_ONLY "Configure the isolated platform adapter without game/library dependencies" OFF)
+
+
+  if(EMSCRIPTEN AND MEGUSTA_BROWSER)
+    #target_sources(megusta_game PRIVATE src/platform/browser_legacy_gl.cpp)
+
+    # gl4es supplies legacy desktop OpenGL on top of WebGL 1 / GLES 2.
+    # Keep it confined to the browser game, not the scene-inspection/tests.
+    set(MEGUSTA_GL4ES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/upstream/gl4es" CACHE PATH
+      "Path to the gl4es source tree")
+    if(NOT EXISTS "${MEGUSTA_GL4ES_DIR}/CMakeLists.txt")
+      message(FATAL_ERROR
+        "Browser megusta_game requires gl4es at ${MEGUSTA_GL4ES_DIR}; "
+        "clone https://github.com/ptitSeb/gl4es there or set MEGUSTA_GL4ES_DIR")
+    endif()
+    set(STATICLIB ON CACHE BOOL "Build gl4es as a static library" FORCE)
+    set(NOX11 ON CACHE BOOL "Disable X11 in gl4es" FORCE)
+    set(NOEGL ON CACHE BOOL "Use an externally created GLES context" FORCE)
+    set(NO_LOADER ON CACHE BOOL "Disable gl4es dynamic GLES loading" FORCE)
+    set(NO_INIT_CONSTRUCTOR ON CACHE BOOL "Initialize gl4es explicitly" FORCE)
+    set(DEFAULT_ES 2 CACHE STRING "Use the GLES 2 backend" FORCE)
+    add_subdirectory("${MEGUSTA_GL4ES_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/gl4es")
+  endif()
+
+
 include(cmake/Platform.cmake)
 if(MEGUSTA_PLATFORM_ONLY)
   add_executable(megusta_platform_probe tests/platform_probe.cpp tests/platform_check.cpp)
@@ -70,7 +94,7 @@ if(NOT MSVC AND CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
   # the zlib codec is integer-only and keeps conservative aliasing semantics.
   target_compile_options(megusta_zlib PRIVATE -O2 -fno-strict-aliasing)
   target_compile_options(megusta_png PRIVATE -O2 -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT EMSCRIPTEN)
     target_compile_options(megusta_png PRIVATE -mfpmath=387 -mno-sse -mno-sse2)
   endif()
 elseif(MSVC)
@@ -82,24 +106,25 @@ target_link_libraries(megusta_probe PRIVATE megusta_png)
 
 # PLIB is compiled from the complete patched distribution in vendor/plib.
 include(cmake/PLIB.cmake)
+if(WIN32 OR (EMSCRIPTEN AND MEGUSTA_BROWSER))
+  include(cmake/CPython.cmake)
+endif()
+function(megusta_apply_vc6_x87_model target)
+  if(NOT MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(${target} PRIVATE -O2 -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT EMSCRIPTEN)
+      target_compile_options(${target} PRIVATE -mfpmath=387 -mno-sse -mno-sse2)
+    endif()
+  elseif(MSVC)
+    target_compile_options(${target} PRIVATE /fp:precise)
+  endif()
+endfunction()
 if(WIN32)
   # The recovered executable was built with VC6 on 32-bit x86, where scalar
   # floating-point code uses the x87 stack. Keep DTS arithmetic on that model
   # for the runtime, prefix probe, and focused checks; double-evaluation alone
   # does not select x87 when the compiler targets i686.
-  function(megusta_apply_vc6_x87_model target)
-    if(NOT MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-      target_compile_options(${target} PRIVATE -O2 -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
-      if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-        target_compile_options(${target} PRIVATE -mfpmath=387 -mno-sse -mno-sse2)
-      endif()
-    elseif(MSVC)
-      target_compile_options(${target} PRIVATE /fp:precise)
-    endif()
-  endfunction()
-
   # CPython 1.5.2 is the recovered embedded runtime used by the game.
-  include(cmake/CPython.cmake)
   option(MEGUSTA_AUDIO_DIRECTSOUND_BACKEND "Use the recovered DirectSound OpenAL backend by default" ON)
   add_library(megusta_audio STATIC src/audio/game_audio.cpp)
   target_include_directories(megusta_audio PUBLIC src)
@@ -193,6 +218,11 @@ if(WIN32)
     target_link_libraries(${check_name} PRIVATE opengl32)
   endforeach()
 endif()
+if(EMSCRIPTEN AND MEGUSTA_BROWSER)
+  add_library(megusta_audio STATIC src/audio/game_audio.cpp)
+  target_include_directories(megusta_audio PUBLIC src)
+  target_compile_definitions(megusta_audio PRIVATE MEGUSTA_AUDIO_NO_BACKEND)
+endif()
 add_executable(megusta_plib_check tests/plib_core.cpp)
 target_link_libraries(megusta_plib_check PRIVATE plib_sg plib_ul)
 if(MEGUSTA_BUILD_PUI)
@@ -224,7 +254,7 @@ if(MEGUSTA_BUILD_SSG)
     src/engine/directory_services.cpp src/engine/mapped_resource_index.cpp)
   # The reference oracle mirrors the original 32-bit process layout and has
   # explicit x86 assembly checks. Do not add unusable oracle targets to x64.
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
     add_library(megusta_original_plib_oracle SHARED tests/original_plib_leaf.cpp)
     target_link_libraries(megusta_original_plib_oracle PRIVATE plib_ssg)
     if(MEGUSTA_BUILD_PUI)
@@ -375,6 +405,9 @@ if(MEGUSTA_BUILD_SSG)
   target_sources(megusta_scene_inspect PRIVATE src/engine/resource_runtime.cpp)
   megusta_apply_vc6_x87_model(megusta_scene_inspect)
   target_include_directories(megusta_scene_inspect PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  target_include_directories(megusta_scene_inspect PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/plib/src/net"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/plib/src/pui")
   target_link_libraries(megusta_scene_inspect PRIVATE
     plib_ssg glpng megusta_png megusta_zlib megusta_audio)
   # Keep every evidenced PLIB component available to the application linker.
@@ -393,8 +426,12 @@ if(MEGUSTA_BUILD_SSG)
   # library closure as the integration executable, but omit its CLI and test
   # drivers. The Win32 application composition root binds entry, gameplay,
   # world, rendering and platform services before startup runs.
-  add_executable(megusta_game WIN32 src/apps/game_winmain.cpp)
-  target_sources(megusta_game PRIVATE src/apps/win32_game_application.cpp)
+  if(WIN32)
+    add_executable(megusta_game WIN32 src/apps/game_winmain.cpp)
+  else()
+    add_executable(megusta_game src/apps/browser_game_main.cpp)
+  endif()
+  target_sources(megusta_game PRIVATE src/apps/game_application.cpp)
   get_target_property(MEGUSTA_GAME_SOURCE_CANDIDATES megusta_scene_inspect SOURCES)
   set(MEGUSTA_GAME_SOURCES)
   foreach(source IN LISTS MEGUSTA_GAME_SOURCE_CANDIDATES)
@@ -404,16 +441,31 @@ if(MEGUSTA_BUILD_SSG)
     list(APPEND MEGUSTA_GAME_SOURCES "${source}")
   endforeach()
   target_sources(megusta_game PRIVATE ${MEGUSTA_GAME_SOURCES})
+  if(EMSCRIPTEN AND MEGUSTA_BROWSER)
+    # gl4es's GL/gl.h remaps gl* calls to gl4es_gl* symbols on Emscripten.
+    target_include_directories(megusta_game BEFORE PRIVATE "${MEGUSTA_GL4ES_DIR}/include")
+    target_link_libraries(megusta_game PRIVATE GL)
+
+  endif()
   target_sources(megusta_game PRIVATE src/game/application_input.cpp)
   if(WIN32)
     # Native startup callbacks belong to the Windows executable, not the
     # scene-inspection harness.
     target_sources(megusta_game PRIVATE src/game/win32_startup_host.cpp)
+  elseif(EMSCRIPTEN AND MEGUSTA_BROWSER)
+    target_sources(megusta_game PRIVATE src/game/browser_startup_host.cpp)
   endif()
   get_target_property(MEGUSTA_GAME_LINKS megusta_scene_inspect LINK_LIBRARIES)
   target_link_libraries(megusta_game PRIVATE ${MEGUSTA_GAME_LINKS})
   target_include_directories(megusta_game PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   target_compile_definitions(megusta_game PRIVATE MEGUSTA_GAME_EXECUTABLE=1)
+  if(EMSCRIPTEN AND MEGUSTA_BROWSER)
+    set_target_properties(megusta_game PROPERTIES SUFFIX ".html")
+    target_link_options(megusta_game PRIVATE
+      "-sENVIRONMENT=web" "-sALLOW_MEMORY_GROWTH=1" "-Wl,--error-limit=0" "-gsource-map"
+      "SHELL:-s FULL_ES2=1" "SHELL:-s MIN_WEBGL_VERSION=1" "SHELL:-s MAX_WEBGL_VERSION=1")
+    megusta_package_assets(megusta_game)
+  endif()
   if(MEGUSTA_GAME_PRESERVE_LAUNCH_CWD)
     target_compile_definitions(megusta_game PRIVATE MEGUSTA_GAME_PRESERVE_LAUNCH_CWD=1)
   endif()

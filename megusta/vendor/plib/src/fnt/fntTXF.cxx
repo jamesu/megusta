@@ -24,7 +24,7 @@
 
 #include "fntLocal.h"
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #  ifndef macintosh
 #    include <GL/glx.h>
 #  else

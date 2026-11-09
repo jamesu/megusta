@@ -28,7 +28,11 @@
 #include "fnt.h"
 #ifdef MEGUSTA_PUI_FNT
 // Target platform window service; no GLUT or system bitmap fonts.
+#if defined(_WIN32)
 void puSetNativeWindow ( HWND window ) ;
+#else
+void puSetNativeWindow ( void *window ) ;
+#endif
 #endif
 
 /*

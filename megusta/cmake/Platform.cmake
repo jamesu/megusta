@@ -1,4 +1,24 @@
 # No project includes escape megusta; all OS handles stay behind the adapter.
+
+
+if(EMSCRIPTEN AND MEGUSTA_BROWSER)
+  if(NOT DEFINED MEGUSTA_GL4ES_DIR)
+    set(MEGUSTA_GL4ES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/gl4es")
+  endif()
+  if(NOT EXISTS "${MEGUSTA_GL4ES_DIR}/include/GL/gl.h")
+    message(FATAL_ERROR "gl4es headers not found: ${MEGUSTA_GL4ES_DIR}/include/GL/gl.h")
+  endif()
+endif()
+
+function(megusta_platform_use_gl4es target)
+  if(EMSCRIPTEN AND MEGUSTA_BROWSER)
+    # BEFORE ensures <GL/gl.h> resolves to gl4es's symbol-mangling header.
+    target_include_directories(${target} BEFORE PRIVATE "${MEGUSTA_GL4ES_DIR}/include")
+  endif()
+endfunction()
+
+
+
 add_library(megusta_platform STATIC src/platform/runtime.cpp)
 target_include_directories(megusta_platform PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_compile_features(megusta_platform PUBLIC cxx_std_17)
@@ -16,6 +36,10 @@ elseif(EMSCRIPTEN AND MEGUSTA_BROWSER)
   target_compile_options(megusta_platform PUBLIC "-sUSE_SDL=2")
   target_link_options(megusta_platform PUBLIC "-sUSE_SDL=2")
   target_link_options(megusta_platform PUBLIC "-sMIN_WEBGL_VERSION=1" "-sMAX_WEBGL_VERSION=1")
+
+  megusta_platform_use_gl4es(megusta_platform)
+  # PLIB/SSG and the recovered renderer use the desktop fixed-function GL
+  # interface. Emscripten translates this subset to WebGL for the browser.
 endif()
 if(NOT MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
   target_compile_options(megusta_platform PRIVATE -fno-fast-math -ffp-contract=off)

@@ -1,6 +1,10 @@
 #pragma once
 #include <cstdint>
+#if defined(_WIN32)
 #include <windows.h>
+#else
+#include <vector>
+#endif
 namespace megusta {
 // Serialized RBX records. These are file contracts, not C++ object ABI views.
 struct ResourceArchiveHeader {
@@ -30,8 +34,12 @@ public:
     std::int32_t modificationTime() const noexcept { return modificationTime_; }
     bool findResource(const char* path, const void** data, std::uint32_t* size) const;
 private:
+#if defined(_WIN32)
     HANDLE fileHandle_;
     HANDLE mappingHandle_;
+#else
+    std::vector<unsigned char> fileBytes_;
+#endif
     const ResourceArchiveHeader* mapping_;
     ResourceHashEntry* entries_;
     std::int32_t entryCount_;

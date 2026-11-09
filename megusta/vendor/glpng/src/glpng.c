@@ -33,7 +33,7 @@
 
 /* Used to decide if GL/gl.h supports the paletted extension */
 #ifdef GL_COLOR_INDEX1_EXT
-#define SUPPORTS_PALETTE_EXT
+//#define SUPPORTS_PALETTE_EXT
 #endif
 
 static unsigned char DefaultAlphaCallback(unsigned char red, unsigned char green, unsigned char blue) {

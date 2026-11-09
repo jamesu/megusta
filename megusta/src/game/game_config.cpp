@@ -2,6 +2,7 @@
 #include "config_literals.h"
 #include "../engine/resource_mount.h"
 #include "../engine/runtime_adapters.h"
+#include "../engine/string_services.h"
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
@@ -22,13 +23,13 @@ GameConfig::~GameConfig() { while (activeLevel_ > 0) pop(); clear(); }
 void GameConfig::changed(const char*, const char*, const char*) {}
 ConfigSection* GameConfig::findSection(const char* name) const {
     for (auto* section = sectionsByLevel_[activeLevel_]; section; section = section->next)
-        if (!_stricmp(section->name, name)) return section;
+        if (!strings::compareInsensitive(section->name, name)) return section;
     return nullptr;
 }
 ConfigKey* GameConfig::findKey(const char* section, const char* name) const {
     auto* found = findSection(section);
     if (found) for (auto* key = found->keys; key; key = key->next)
-        if (!_stricmp(key->name, name)) return key;
+        if (!strings::compareInsensitive(key->name, name)) return key;
     return nullptr;
 }
 char** GameConfig::readSections() const {
@@ -100,7 +101,7 @@ void GameConfig::writeBool(const char* section, const char* key, bool value) {
 }
 void GameConfig::removeSection(const char* name) {
     ConfigSection** link = &sectionsByLevel_[activeLevel_];
-    while (*link && _stricmp((*link)->name, name)) link = &(*link)->next;
+    while (*link && strings::compareInsensitive((*link)->name, name)) link = &(*link)->next;
     if (!*link) return;
     ConfigSection* section = *link;
     *link = section->next;

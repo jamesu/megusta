@@ -1,6 +1,8 @@
 #include "opengl_adapter.h"
 #include "gl_token_table.h"
-#include <windows.h>
+#ifdef __EMSCRIPTEN__
+#include <SDL2/SDL.h>
+#endif
 #include <GL/gl.h>
 #include <cstring>
 namespace megusta {
@@ -69,8 +71,13 @@ void OpenGLAdapter::scissor(int x,int y,int w,int h) { glScissor(x,y,w,h); }
 void OpenGLAdapter::loadMultitextureFunctions() {
     const char* extensions=reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
     if (extensions && std::strstr(extensions,"GL_ARB_multitexture")) {
+#ifdef __EMSCRIPTEN__
+        activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(SDL_GL_GetProcAddress("glActiveTextureARB"));
+        clientActiveTextureFunction=reinterpret_cast<GLActiveTextureProc>(SDL_GL_GetProcAddress("glClientActiveTextureARB"));
+#elif defined(_WIN32)
         activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glActiveTextureARB"));
         clientActiveTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glClientActiveTextureARB"));
+#endif
     }
 }
 }

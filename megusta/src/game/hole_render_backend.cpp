@@ -1,5 +1,4 @@
 #include "hole_render_backend.h"
-#include <windows.h>
 #include <GL/gl.h>
 #include "ssg.h"
 namespace megusta {

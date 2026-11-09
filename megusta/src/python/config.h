@@ -9,6 +9,46 @@
 #ifndef MEGUSTA_PYTHON_CONFIG_H
 #define MEGUSTA_PYTHON_CONFIG_H
 
+#if defined(__EMSCRIPTEN__)
+/* wasm32 CPython embed: POSIX libc, 32-bit pointers/long, no OS threads. */
+#define HAVE_LIMITS_H 1
+#define HAVE_HYPOT 1
+#define HAVE_CLOCK 1
+#define HAVE_STRFTIME 1
+#define HAVE_STRERROR 1
+#define HAVE_LONG_LONG 1
+#define LONG_LONG long long
+#define SIZEOF_INT 4
+#define SIZEOF_LONG 4
+#define SIZEOF_LONG_LONG 8
+#define SIZEOF_VOID_P 4
+#define WORD_BIT 32
+#define COMPILER "[Emscripten wasm32]"
+#define PYTHONPATH "/"
+#define DONT_HAVE_SIG_ALARM 1
+#define DONT_HAVE_SIG_PAUSE 1
+#define HAVE_PROTOTYPES 1
+#define HAVE_STDARG_PROTOTYPES 1
+#define HAVE_STDLIB_H 1
+#define HAVE_STDDEF_H 1
+#define HAVE_FCNTL_H 1
+#define HAVE_UNISTD_H 1
+#define HAVE_GETPID 1
+#define HAVE_PUTENV 1
+#define HAVE_MKTIME 1
+#define HAVE_SETVBUF 1
+#define HAVE_FTIME 1
+#define HAVE_GETTIMEOFDAY 1
+#define HAVE_SYS_STAT_H 1
+#define HAVE_SYS_TYPES_H 1
+#define HAVE_SYS_TIME_H 1
+#define TIME_WITH_SYS_TIME 1
+#define HAVE_SIGNAL_H 1
+#define HAVE_ERRNO_H 1
+#define Py_PTR_FMT "%lx"
+#define Py_PTR_FMT_ARG(p) ((unsigned long)(p))
+#define Py_PTR_HASH(p) ((long)(p))
+#else
 #ifndef WIN32
 #define WIN32 1
 #endif
@@ -92,6 +132,7 @@
 #endif
 #ifndef WORD_BIT
 #define WORD_BIT 32
+#endif
 #endif
 
 #endif /* MEGUSTA_PYTHON_CONFIG_H */

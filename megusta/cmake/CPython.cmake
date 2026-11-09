@@ -4,6 +4,13 @@ if(NOT EXISTS "${MEGUSTA_PYTHON_ROOT}/PCbuild/python15.dsp")
 endif()
 # Keep the embedded runtime source closure explicit here. Recovery manifests
 # document the inventory but are not required to configure or build the game.
+if(WIN32)
+  set(MEGUSTA_PYTHON_PLATFORM_UNITS PC/dl_nt.c PC/getpathp.c PC/import_nt.c)
+else()
+  # Browser build uses CPython's POSIX path and OS module ports; runtime
+  # extension loading remains disabled by the recovered NO_DYNAMIC_LINK path.
+  set(MEGUSTA_PYTHON_PLATFORM_UNITS Modules/getpath.c)
+endif()
 set(MEGUSTA_PYTHON_UNITS
   Modules/arraymodule.c
   Modules/binascii.c
@@ -46,9 +53,6 @@ set(MEGUSTA_PYTHON_UNITS
   Objects/stringobject.c
   Objects/tupleobject.c
   Objects/typeobject.c
-  PC/dl_nt.c
-  PC/getpathp.c
-  PC/import_nt.c
   Parser/acceler.c
   Parser/bitset.c
   Parser/grammar1.c
@@ -83,7 +87,8 @@ set(MEGUSTA_PYTHON_UNITS
   Python/sysmodule.c
   Python/traceback.c
   Python/importdl.c
-  Modules/getbuildinfo.c)
+  Modules/getbuildinfo.c
+  ${MEGUSTA_PYTHON_PLATFORM_UNITS})
 set(MEGUSTA_PYTHON_SOURCES)
 foreach(unit IN LISTS MEGUSTA_PYTHON_UNITS)
   set(source "${MEGUSTA_PYTHON_ROOT}/${unit}")
@@ -121,7 +126,7 @@ set_target_properties(megusta_python PROPERTIES
 if(NOT MSVC AND CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
   # The original x86 build uses x87. x64 uses the platform's native FP ABI.
   target_compile_options(megusta_python PRIVATE -O2 -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT EMSCRIPTEN)
     target_compile_options(megusta_python PRIVATE -mfpmath=387 -mno-sse -mno-sse2)
   endif()
 elseif(MSVC)
@@ -129,7 +134,9 @@ elseif(MSVC)
   set_property(TARGET megusta_python PROPERTY
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
-target_link_libraries(megusta_python PUBLIC advapi32 winmm wsock32)
+if(WIN32)
+  target_link_libraries(megusta_python PUBLIC advapi32 winmm wsock32)
+endif()
 if(MSVC)
   # PC/config.h carries an automatic python15 DLL import-library directive.
   # This target is a static embed, so ignore that default-library pragma even

@@ -39,7 +39,7 @@
 
 #endif
 
-#if !defined(STDC_HEADERS) && !defined(socklen_t)
+#if defined(WIN32) && !defined(socklen_t)
 #define socklen_t int
 #endif
 

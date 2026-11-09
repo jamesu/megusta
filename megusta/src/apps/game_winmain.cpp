@@ -1,5 +1,5 @@
 #include "game/startup.h"
-#include "win32_game_application.h"
+#include "game_application.h"
 #include <windows.h>
 #include <exception>
 #include <cstdio>
@@ -8,7 +8,7 @@
 // WinMainCRTStartup and calls this platform entrypoint with the native instance.
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int) {
     try {
-        megusta::runWin32GameApplication(instance,__argc,__argv);
+        megusta::runGameApplication(instance,__argc,__argv);
         return 0;
     } catch (const std::exception& error) {
         // Keep startup failures observable in headless Wine/test runs as well

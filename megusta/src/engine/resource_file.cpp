@@ -1,7 +1,11 @@
 #include "resource_file.h"
 #include <cstdlib>
 #include <cstring>
+#if defined(_WIN32)
 #include <io.h>
+#else
+#include <unistd.h>
+#endif
 namespace megusta {
 ResourceFile::~ResourceFile() { if (!file_ || ownsFile_) close(); }
 // 0043a920: object deletion is expressed through the C++ destructor by callers.
@@ -125,4 +129,11 @@ int ResourceFile::error() const { return file_ ? std::ferror(file_) : 0; }
 void ResourceFile::clearerr() { if (file_) std::clearerr(file_); }
 }
 
-namespace megusta { int ResourceFile::isatty() const { return file_ ? _isatty(_fileno(file_)) : 0; } }
+namespace megusta { int ResourceFile::isatty() const {
+    if (!file_) return 0;
+#if defined(_WIN32)
+    return _isatty(_fileno(file_));
+#else
+    return ::isatty(fileno(file_));
+#endif
+} }
