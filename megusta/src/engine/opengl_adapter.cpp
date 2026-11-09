@@ -1,8 +1,5 @@
 #include "opengl_adapter.h"
 #include "gl_token_table.h"
-#ifdef __EMSCRIPTEN__
-#include <SDL2/SDL.h>
-#endif
 #include <GL/gl.h>
 #include <cstring>
 namespace megusta {
@@ -69,15 +66,17 @@ void OpenGLAdapter::callList(std::uint32_t list) { glCallList(list); }
 void OpenGLAdapter::deleteLists(std::uint32_t list,int count) { glDeleteLists(list,count); }
 void OpenGLAdapter::scissor(int x,int y,int w,int h) { glScissor(x,y,w,h); }
 void OpenGLAdapter::loadMultitextureFunctions() {
-    const char* extensions=reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
-    if (extensions && std::strstr(extensions,"GL_ARB_multitexture")) {
 #ifdef __EMSCRIPTEN__
-        activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(SDL_GL_GetProcAddress("glActiveTextureARB"));
-        clientActiveTextureFunction=reinterpret_cast<GLActiveTextureProc>(SDL_GL_GetProcAddress("glClientActiveTextureARB"));
+    // All other browser GL calls pass through gl4es. Resolve these through
+    // the same header aliases so gl4es's cached active-unit state stays in
+    // sync; SDL_GL_GetProcAddress would return the underlying GLES entrypoint.
+    activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(&glActiveTexture);
+    clientActiveTextureFunction=reinterpret_cast<GLActiveTextureProc>(&glClientActiveTexture);
 #elif defined(_WIN32)
-        activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glActiveTextureARB"));
-        clientActiveTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glClientActiveTextureARB"));
+    activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glActiveTextureARB"));
+    if (!activeTextureFunction)
+        activeTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glActiveTexture"));
+    clientActiveTextureFunction=reinterpret_cast<GLActiveTextureProc>(wglGetProcAddress("glClientActiveTextureARB"));
 #endif
-    }
 }
 }

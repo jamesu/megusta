@@ -26,9 +26,11 @@ void viewport(void* p,int x,int y,int w,int h) { adapter(p).viewport(x,y,w,h); }
 void ortho(void* p,double l,double r,double b,double t,double n,double f) {
     adapter(p).ortho(static_cast<float>(l),static_cast<float>(r),static_cast<float>(b),static_cast<float>(t),static_cast<float>(n),static_cast<float>(f));
 }
+void selectBaseTextureUnit(void* p) { adapter(p).selectBaseTextureUnit(); }
 }
 HoleRenderServices makeOpenGLHoleRenderServices(OpenGLAdapter& a) {
     return {&a,matrixMode,loadIdentity,projectionIdentity,depthRange,colorMask,disable,enable,polygonMode,
-            frontFace,disableClientState,blendFunc,texEnvi,depthMask,color4f,shadeModel,clearColor,clearFlags,depthFunc,viewport,ortho};
+            frontFace,disableClientState,blendFunc,texEnvi,depthMask,color4f,shadeModel,clearColor,clearFlags,depthFunc,viewport,ortho,
+            selectBaseTextureUnit};
 }
 }

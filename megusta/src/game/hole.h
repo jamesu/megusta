@@ -60,6 +60,7 @@ struct HoleRenderServices {
     void (*depthFunc)(void*,int);
     void (*viewport)(void*,int,int,int,int);
     void (*ortho)(void*,double,double,double,double,double,double);
+    void (*selectBaseTextureUnit)(void*);
 };
 struct HoleServices {
     HoleFrameClock& clock;

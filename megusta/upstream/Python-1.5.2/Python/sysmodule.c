@@ -45,6 +45,14 @@ Data members:
 */
 
 #include "Python.h"
+#ifdef MEGUSTA_BROWSER_RELOAD_ON_EXIT
+#include <emscripten.h>
+static void megusta_browser_reload_on_exit(void)
+{
+    emscripten_cancel_main_loop();
+    EM_ASM({ window.location.reload(); });
+}
+#endif
 
 #include "osdefs.h"
 
@@ -126,9 +134,17 @@ sys_exit(self, args)
 	PyObject *self;
 	PyObject *args;
 {
+#ifdef MEGUSTA_BROWSER_RELOAD_ON_EXIT
+    /* Browser adaptation: EXITGAME.PY's confirmed quit starts a fresh page
+       session instead of leaving a terminated interpreter in the canvas. */
+    megusta_browser_reload_on_exit();
+    Py_INCREF(Py_None);
+    return Py_None;
+#else
 	/* Raise SystemExit so callers may catch it or clean up. */
 	PyErr_SetObject(PyExc_SystemExit, args);
 	return NULL;
+#endif
 }
 
 static char exit_doc[] =

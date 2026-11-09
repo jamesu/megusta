@@ -2,11 +2,16 @@
 #ifdef __EMSCRIPTEN__
 #include <SDL2/SDL.h>
 #include <emscripten.h>
-#include <GLES2/gl2.h>
+#include <GL/gl.h>
 #include <gl4esinit.h>
 namespace megusta::platform {
 namespace {
 constexpr unsigned subsystems=SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK|SDL_INIT_TIMER;
+void browserFramebufferSize(int* width,int* height) {
+    SDL_Window* window=SDL_GL_GetCurrentWindow();
+    if (window) SDL_GL_GetDrawableSize(window,width,height);
+    else { *width=0; *height=0; }
+}
 int special(SDL_Keycode key) {
     if (key>=SDLK_F1 && key<=SDLK_F12) return static_cast<int>(key-SDLK_F1)+1;
     switch (key) {
@@ -32,6 +37,10 @@ bool BrowserRuntime::create(const char* title) {
     if (!context || SDL_GL_MakeCurrent(window,context)!=0) { reportError(); shutdown(); return false; }
 
     #ifdef __EMSCRIPTEN__
+    // NO_LOADER/NOEGL gl4es needs the host GLES resolver before probing the
+    // current context. Otherwise it skips detection and uses fallback caps.
+    set_getprocaddress(SDL_GL_GetProcAddress);
+    set_getmainfbsize(browserFramebufferSize);
     initialize_gl4es();
     #endif
 
@@ -102,7 +111,12 @@ bool BrowserRuntime::pumpEvents() {
     state.cursorCaptured=SDL_GetRelativeMouseMode()==SDL_TRUE;
     return running;
 }
-void BrowserRuntime::finishAndPresent() { glFinish(); SDL_GL_SwapWindow(window); }
+void BrowserRuntime::finishAndPresent() {
+    // Use gl4es's glFinish alias: it drains deferred immediate-mode lists
+    // before finishing GLES. Calling raw GLES glFinish leaves final HUD text
+    // queued inside gl4es across the browser's frame presentation boundary.
+    glFinish(); SDL_GL_SwapWindow(window);
+}
 void BrowserRuntime::setCursorMode(CursorMode mode) {
     if (!state.active || (mode!=CursorMode::Released && mode!=CursorMode::Captured)) return;
     if (SDL_SetRelativeMouseMode(mode==CursorMode::Captured?SDL_TRUE:SDL_FALSE)!=0) reportError();

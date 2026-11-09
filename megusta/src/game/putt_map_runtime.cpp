@@ -2,6 +2,8 @@
 #include "scene_object.h"
 #include "game_config.h"
 #include "player.h"
+#include "ai_diagnostics.h"
+#include <cstdio>
 #include <cstring>
 namespace megusta {
 namespace {
@@ -24,8 +26,10 @@ void estimate(void* p,const float* from,const float* to,float* heading,float* po
 PuttMapRuntime::PuttMapRuntime(PuttMap& m,SceneObjectCollection& o,GameConfig& c,Random& r,PuttMapRuntimeHost& h)
     : map(m),objects(o),config(c),random(r),host(h) {}
 void PuttMapRuntime::load(const char* holeName,std::uint32_t tick) {
-    loadBinary(holeName,tick);
+    const bool loaded=loadBinary(holeName,tick);
     loadScript(holeName);
+    if(aiDiagnosticsEnabled()) std::printf("AI course=%s table=%s waypoints=%d shots=%d zones=%d conditions=%d\n",
+        holeName,loaded?"loaded":"missing/invalid",map.waypointCount,map.shotCount,map.zoneCount,map.conditionCount);
 }
 bool PuttMapRuntime::loadBinary(const char* holeName,std::uint32_t tick) {
     return map.loadBinary(holeName,tick,host.io);
@@ -52,5 +56,8 @@ bool PuttMapRuntime::updatePlayerDecision(Player& player,bool cameraControlMode,
 void PuttMapRuntime::selectForPlayerAI(void* p,int strokes,const float* position,int,PuttShotChoice& choice) {
     auto& r=runtime(p); PuttSelectionServices services{p,r.random,estimate,fatal};
     r.map.selectPutt(strokes,position,choice,services);
+    if(aiDiagnosticsEnabled()) std::printf("AI shot budget=%d position=(%g,%g,%g) kind=%d heading=%g power=%g fallback=(%g,%g) waypointDistance=%g cost=%g\n",
+        strokes,position[0],position[1],position[2],choice.kind,choice.heading,choice.power,
+        choice.fallbackHeading,choice.fallbackPower,choice.distance,choice.estimatedStrokeCost);
 }
 }

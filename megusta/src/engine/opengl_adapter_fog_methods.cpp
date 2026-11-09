@@ -39,4 +39,25 @@ const char* OpenGLAdapter::getStringOrPlatform(int n) {
 }
 void OpenGLAdapter::activeTexture(int texture) { activeTextureFunction(tokens[texture]); }
 void OpenGLAdapter::clientActiveTexture(int texture) { clientActiveTextureFunction(tokens[texture]); }
+void OpenGLAdapter::selectBaseTextureUnit() {
+#ifdef __EMSCRIPTEN__
+    // gl4es emulates these fixed-function states in its shader. A font atlas
+    // must not inherit scene texture generation, transforms, or extra stages.
+    GLint units=1, matrixMode=GL_MODELVIEW;
+    glGetIntegerv(GL_MAX_TEXTURE_UNITS,&units);
+    glGetIntegerv(GL_MATRIX_MODE,&matrixMode);
+    for (GLint unit=units-1;unit>=0;--unit) {
+        glActiveTexture(GL_TEXTURE0+unit);
+        glDisable(GL_TEXTURE_2D);
+        glDisable(GL_TEXTURE_GEN_S); glDisable(GL_TEXTURE_GEN_T);
+        glDisable(GL_TEXTURE_GEN_R); glDisable(GL_TEXTURE_GEN_Q);
+    }
+    glClientActiveTexture(GL_TEXTURE0);
+    glMatrixMode(GL_TEXTURE); glLoadIdentity(); glMatrixMode(matrixMode);
+    glDisable(GL_FOG); glDisable(GL_ALPHA_TEST);
+#else
+    if (activeTextureFunction) activeTexture(0x8a);
+    if (clientActiveTextureFunction) clientActiveTexture(0x8a);
+#endif
+}
 }

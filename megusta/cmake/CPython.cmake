@@ -119,6 +119,9 @@ target_include_directories(megusta_python PUBLIC
   "${MEGUSTA_PYTHON_ROOT}/Modules")
 target_compile_definitions(megusta_python PRIVATE
   NDEBUG USE_DL_EXPORT)
+if(EMSCRIPTEN AND MEGUSTA_BROWSER)
+  target_compile_definitions(megusta_python PRIVATE MEGUSTA_BROWSER_RELOAD_ON_EXIT=1)
+endif()
 set_target_properties(megusta_python PROPERTIES
   C_STANDARD 90
   C_STANDARD_REQUIRED OFF

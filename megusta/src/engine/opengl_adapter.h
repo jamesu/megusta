@@ -95,6 +95,7 @@ public:
     void loadMultitextureFunctions();
     void activeTexture(int texture);
     void clientActiveTexture(int texture);
+    void selectBaseTextureUnit();
     void emitNormalizedNormal(float x,float y,float z);
     void drawTorus(float innerRadius,int sides,float outerRadius,int rings);
     void drawCylinder(float baseRadius,float topRadius,float height,int slices,int stacks);

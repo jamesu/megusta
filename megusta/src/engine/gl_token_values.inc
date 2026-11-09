@@ -177,4 +177,8 @@ static_assert(GL_SPECULAR == 0x1202u, "GL token 0x72");
 static_assert(GL_EMISSION == 0x1600u, "GL token 0x73");
 static_assert(GL_SHININESS == 0x1601u, "GL token 0x77");
 values[0x81] = GL_FOG; // strong: call-site mapping
+values[0x89] = 0x84e2u; // GL_MAX_TEXTURE_UNITS: standard GL enum
+values[0x8a] = 0x84c0u; // GL_TEXTURE0: standard GL enum
+values[0x8b] = 0x84c1u; // GL_TEXTURE1: standard GL enum
+values[0x8c] = 0x84c2u; // GL_TEXTURE2: standard GL enum
 values[0xa3] = GL_COMPILE; // strong: call-site mapping

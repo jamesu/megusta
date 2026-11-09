@@ -18,6 +18,7 @@ void rendererSetColor(fntRenderer*,float r,float g,float b,float a) { glColor4f(
 void rendererShadowPuts(fntRenderer* renderer,const char* text,int x,int y,float r,float g,float b,float a) {
     renderer->start2f(static_cast<float>(x),static_cast<float>(y)); glColor4f(0,0,0,a); renderer->puts(text);
     renderer->start2f(static_cast<float>(x-1),static_cast<float>(y+1)); glColor4f(r,g,b,a); renderer->puts(text);
+
 }
 void copyGuiDefaultFont(puFont* output) { *output=puGetDefaultLegendFont(); }
 void setTransformPosition(ssgBaseTransform* transform,const float* position) {

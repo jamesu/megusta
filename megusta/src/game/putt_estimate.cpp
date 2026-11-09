@@ -26,11 +26,12 @@ void estimatePutt(const float* position,const float* target,float* heading,float
     float adjusted=static_cast<float>(*power*1.05);
     if (adjusted>=0.9f) adjusted=0.9f; else if (adjusted<=0.1f) adjusted=0.1f;
     *power=adjusted;
-    // The saved body takes asin after the horizontal magnitude and adjusts
-    // the quadrant from the sign of X. The x87 argument is carried in ST(0),
-    // so the decompiler omits the normalized Y operand.
+    // 00447731..0044773e: FDIV, FCHS, then a float stack argument to asin.
+    // The decompiler omits this argument. Strike speed is negative, so the
+    // normalized Y delta must be negated before the quadrant correction.
     const float horizontal=binding_math_sqrtf(x*x+y*y);
-    long double angle=std::asin(static_cast<long double>(y)/horizontal)*57.29578L;
+    const float sine=static_cast<float>(-static_cast<long double>(y)/horizontal);
+    long double angle=std::asin(static_cast<long double>(sine))*57.29578L;
     if (x<0.0f) angle=180.0L-angle;
     if (randomized) angle=(static_cast<long double>(s.random.generate()&255u)*0.0078125L-1.0L)+angle;
     *heading=static_cast<float>(angle);

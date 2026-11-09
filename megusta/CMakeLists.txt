@@ -219,9 +219,9 @@ if(WIN32)
   endforeach()
 endif()
 if(EMSCRIPTEN AND MEGUSTA_BROWSER)
-  add_library(megusta_audio STATIC src/audio/game_audio.cpp)
+  add_library(megusta_audio STATIC src/audio/game_audio.cpp src/audio/browser_webaudio.cpp src/audio/browser_audio_stream.cpp src/audio/wave.cpp)
   target_include_directories(megusta_audio PUBLIC src)
-  target_compile_definitions(megusta_audio PRIVATE MEGUSTA_AUDIO_NO_BACKEND)
+  target_compile_definitions(megusta_audio PRIVATE MEGUSTA_AUDIO_DEFAULT_BROWSER)
 endif()
 add_executable(megusta_plib_check tests/plib_core.cpp)
 target_link_libraries(megusta_plib_check PRIVATE plib_sg plib_ul)
@@ -463,6 +463,10 @@ if(MEGUSTA_BUILD_SSG)
     set_target_properties(megusta_game PROPERTIES SUFFIX ".html")
     target_link_options(megusta_game PRIVATE
       "-sENVIRONMENT=web" "-sALLOW_MEMORY_GROWTH=1" "-Wl,--error-limit=0" "-gsource-map"
+      # Coin deployment alone uses a 60,000-byte stack array. Match the
+      # Windows default reserve instead of Emscripten's 64 KiB stack, and
+      # diagnose overflow before it corrupts lower linear-memory allocations.
+      "-sSTACK_SIZE=1048576" "-sSTACK_OVERFLOW_CHECK=2"
       "SHELL:-s FULL_ES2=1" "SHELL:-s MIN_WEBGL_VERSION=1" "SHELL:-s MAX_WEBGL_VERSION=1")
     megusta_package_assets(megusta_game)
   endif()

@@ -41,8 +41,15 @@ void Driver::setup3dRenderState(HoleRenderServices& r) {
     r.depthFunc(r.context,0x27); r.disable(r.context,0x2e); r.blendFunc(r.context,0x32,0x31);
 }
 void Driver::setup2dProjection(DriverViewport& v,HoleRenderServices& r) {
+    r.selectBaseTextureUnit(r.context);
     r.disable(r.context,0x4a); r.disable(r.context,0x21); r.disable(r.context,0x18);
-    r.disable(r.context,0x67); r.enable(r.context,0x2e); r.blendFunc(r.context,0x37,0x38);
+    r.disable(r.context,0x67); r.disable(r.context,0x66);
+    r.enable(r.context,0x2e); r.blendFunc(r.context,0x37,0x38);
+    // DTS may leave a texture-combine environment on unit zero; PLIB's
+    // fntTexFont assumes the fixed-function default modulation for its atlas.
+    r.texEnvi(r.context,0x48,0x49,0x56);
+    r.colorMask(r.context,true,true,true,true); r.depthMask(r.context,true);
+    r.depthRange(r.context,0.0,1.0);
     int width=v.scaled ? v.displayWidth : v.viewportWidth;
     int height=v.scaled ? v.displayHeight : v.viewportHeight;
     r.viewport(r.context,v.offsetX,v.offsetY,width,height); r.matrixMode(r.context,0xf); r.loadIdentity(r.context);
@@ -72,6 +79,11 @@ void Driver::frame(DriverServices& s) {
     s.hole.drawHud(s.holeServices); s.displayWidgets(s.context,0,9999);
     if(s.client)drawGuiChatOverlay(*s.client,s.holeServices.runtime.objects.sceneRoot!=nullptr,
         gameDriver.activeScript,s.guiDebug);
+#ifdef __EMSCRIPTEN__
+    // Widgets and overlays have their own texture/blend state. The scripted
+    // HUD font pass needs the same 2D baseline as the native HUD pass.
+    setup2dProjection(s.viewport,r);
+#endif
     s.holeServices.runtime.tasks.scheduledTasks.runDrawCallbacks(s.holeServices.runtime.tasks);
     drawGuiTooltip(); s.console.drawOverlay(); flushGuiScenePreview(); networkServiceEnd();
     networkServiceEnd();
