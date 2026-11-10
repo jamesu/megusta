@@ -1,4 +1,5 @@
 #include "camera.h"
+#include "driver.h"
 #include "game_coordinate_system.h"
 #include "player.h"
 #include "balls.h"
@@ -121,7 +122,17 @@ void Camera::buildViewMatrices(CameraFrameServices& s) {
     viewBasis[1]=matrix[1][0]; viewBasis[3]=matrix[1][1]; viewBasis[7]=matrix[1][2];
     viewBasis[4]=matrix[2][0]; viewBasis[5]=matrix[2][1]; viewBasis[8]=matrix[2][2];
     context->getProjectionMatrix(projection); screenProjection[0]=(s.screenWidth/2)*projection[0][0]; screenProjection[1]=(s.screenHeight/2)*projection[1][1];
+    if(driverViewport.worldExpanded) {
+        const auto gui=driverViewport.pixelRectangle();
+        screenProjection[0]*=static_cast<float>(driverViewport.surface.drawableWidth)/gui.width;
+        screenProjection[1]*=static_cast<float>(driverViewport.surface.drawableHeight)/gui.height;
+    }
     screenProjection[2]=static_cast<float>(s.screenWidth/2); screenProjection[3]=static_cast<float>(s.screenHeight/2);
+    if(driverViewport.worldExpanded) {
+        const auto gui=driverViewport.pixelRectangle();
+        screenProjection[2]=(driverViewport.surface.drawableWidth*0.5f-gui.x)*s.screenWidth/gui.width;
+        screenProjection[3]=s.screenHeight-(driverViewport.surface.drawableHeight*0.5f-gui.y)*s.screenHeight/gui.height;
+    }
 }
 void Camera::selectSpatialRegionCamera(CameraFrameServices& s) {
     auto& r=s.runtime; if (!following(s) || state==CameraMode::Sky || s.typeFilter==1) return;

@@ -10,6 +10,7 @@
 #include "hud.h"
 #include "console.h"
 #include "pu.h"
+#include "ssg.h"
 #ifdef MEGUSTA_SDL
 #include "platform/sdl/presentation.h"
 #endif
@@ -90,9 +91,23 @@ void Driver::frame(DriverServices& s) {
         r.clearFlags(r.context,3); r.disable(r.context,0x21); s.gui.drawShellBackground();
         s.displayWidgets(s.context,-9999,-1); networkServiceEnd();
     }
-    const auto sceneRectangle=s.viewport.pixelRectangle();
+    const auto guiRectangle=s.viewport.pixelRectangle();
+    s.viewport.worldExpanded=s.viewport.surface.enabled() && s.viewport.expandGameView &&
+        s.hole.hasActiveScene(s.holeServices.runtime.objects);
+    auto sceneRectangle=guiRectangle;
+    auto* sceneContext=ssgGetCurrentContext();float originalHorizontal,originalVertical;
+    sceneContext->getFOV(&originalHorizontal,&originalVertical);
+    if(s.viewport.worldExpanded) {
+        sceneRectangle={0,0,s.viewport.surface.drawableWidth,s.viewport.surface.drawableHeight};
+        float horizontal=originalHorizontal,vertical=originalVertical;
+        s.viewport.surface.expandedFov(horizontal,vertical,s.viewport.viewportWidth,s.viewport.viewportHeight);
+        sceneContext->setFOV(horizontal,vertical);
+    }
     r.viewport(r.context,sceneRectangle.x,sceneRectangle.y,sceneRectangle.width,sceneRectangle.height);
-    setup3dRenderState(r); s.hole.draw(s.holeServices); s.gui.drawRoot();
+    setup3dRenderState(r); s.hole.draw(s.holeServices);
+    if(s.viewport.worldExpanded)sceneContext->setFOV(originalHorizontal,originalVertical);
+    r.viewport(r.context,guiRectangle.x,guiRectangle.y,guiRectangle.width,guiRectangle.height);
+    s.gui.drawRoot();
     networkServiceEnd(); setup2dProjection(s.viewport,r);
     if (fpsOverlayEnabled) drawPerformanceOverlay(guiFonts.primary,s.clock,s.viewport.displayWidth,
         s.viewport.displayHeight,s.client&&s.client->inGame());
@@ -107,7 +122,7 @@ void Driver::frame(DriverServices& s) {
     s.holeServices.runtime.tasks.scheduledTasks.runDrawCallbacks(s.holeServices.runtime.tasks);
     drawGuiTooltip(); s.console.drawOverlay(); flushGuiScenePreview(); networkServiceEnd();
 #ifdef MEGUSTA_SDL
-    platform::clearLetterboxBars(s.viewport.surface,s.viewport.viewportWidth,s.viewport.viewportHeight);
+    if(!s.viewport.worldExpanded)platform::clearLetterboxBars(s.viewport.surface,s.viewport.viewportWidth,s.viewport.viewportHeight);
 #endif
     networkServiceEnd();
 }

@@ -11,6 +11,10 @@
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
+#ifdef MEGUSTA_SDL
+#include "driver.h"
+#include "platform/sdl/presentation.h"
+#endif
 namespace megusta {
 fntRenderer editorFontRenderer{};
 void drawOutlinedPlayerText(const char* text,int x,int y,fntRenderer& renderer,const float* rgb) {
@@ -44,6 +48,10 @@ void PlayersManager::drawOverlay(PlayerOverlayServices& services) {
     if (currentPlayer->isDone(services.balls) || turnState!=1) return;
     ++displayedStrokeCount;
     if (playerCount<=1 || !services.nameTags) return;
+#ifdef MEGUSTA_SDL
+    if(driverViewport.worldExpanded)platform::beginWorldOverlay(driverViewport.surface,
+        services.screenWidth,services.screenHeight);
+#endif
     const float colors[4][3]={{1,1,0},{0,0,1},{1,0,1},{1,0,0}}; renderer.setPointSize(14);
     for (unsigned i=0;i<playerCount;++i) {
         auto& player=playerStorage[i]; auto* ball=player.getBall(services.balls); CameraScreenPoint screen;
@@ -52,6 +60,9 @@ void PlayersManager::drawOverlay(PlayerOverlayServices& services) {
             drawOutlinedPlayerText(player.name,screen.x+10,services.screenHeight-screen.y-14,renderer,colors[i]);
     }
     renderer.setPointSize(32);
+#ifdef MEGUSTA_SDL
+    if(driverViewport.worldExpanded)platform::endWorldOverlay();
+#endif
 }
 void drawPerformanceOverlay(fntFont* font,const HoleFrameClock& clock,int width,int height,bool network) {
     if (!(clock.fixedTicksPerSecond>0)) return;

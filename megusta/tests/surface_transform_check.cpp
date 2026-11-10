@@ -31,5 +31,22 @@ int main(){
     assert(clip.x==240 && clip.width==1440 && clip.height==1080);
     const auto part=retina.toPixels(10,20,100,80,640,480);
     assert(part.x==277 && part.y==75 && part.width==376 && part.height==300);
+    float hfov=60,vfov=40;
+    wide.expandedFov(hfov,vfov,640,480);
+    assert(hfov>60 && std::abs(vfov-40)<0.0001f);
+    constexpr double radians=3.14159265358979323846/180;
+    // The expanded world retains the original pixel geometry, rather than
+    // stretching the 4:3 projection across the entire drawable.
+    assert(std::abs(1920/std::tan(hfov*radians/2)-1440/std::tan(60*radians/2))<0.001);
+    const double ndc=0.825;
+    const double labelX=512+ndc*(1920.0/1440)*512;
+    const double left=-240.0*1024/1440,right=(1920.0-240)*1024/1440;
+    assert(labelX>1024);
+    assert(std::abs((labelX-left)/(right-left)*1920-(ndc+1)*1920/2)<0.0001);
+    hfov=60;vfov=40;portrait.expandedFov(hfov,vfov,640,480);
+    assert(std::abs(hfov-60)<0.0001f && vfov>40);
+    SurfaceTransform standard{1024,768,1024,768};hfov=60;vfov=40;
+    standard.expandedFov(hfov,vfov,1024,768);
+    assert(std::abs(hfov-60)<0.0001f && std::abs(vfov-40)<0.0001f);
     std::puts("PASS: 4:3 fit, resize, Retina, portrait, odd dimensions, input round trips and preview clipping");
 }

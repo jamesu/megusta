@@ -7,6 +7,8 @@ struct DriverViewport {
     int displayWidth,displayHeight,viewportWidth,viewportHeight,offsetX,offsetY;
     bool scaled;
     platform::SurfaceTransform surface;
+    bool expandGameView=true;
+    bool worldExpanded=false;
     platform::PixelRectangle pixelRectangle()const;
     platform::PixelRectangle pixelScissor(int x,int y,int width,int height)const;
     void set(int width,int height,bool scale);

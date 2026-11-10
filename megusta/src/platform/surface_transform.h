@@ -14,6 +14,12 @@ struct SurfaceTransform {
         else h=std::max(1,static_cast<int>(static_cast<std::int64_t>(w)*height/width));
         return {(drawableWidth-w)/2,(drawableHeight-h)/2,w,h};
     }
+    void expandedFov(float& horizontal,float& vertical,int width,int height)const {
+        const auto r=fit(width,height);
+        constexpr double radians=3.14159265358979323846/180.0;
+        horizontal=static_cast<float>(2*std::atan(std::tan(horizontal*radians/2)*drawableWidth/r.width)/radians);
+        vertical=static_cast<float>(2*std::atan(std::tan(vertical*radians/2)*drawableHeight/r.height)/radians);
+    }
     void toCanvas(int& x,int& y,int width,int height)const {
         const auto r=fit(width,height);
         x=static_cast<int>(std::floor((double(x)*drawableWidth/windowWidth-r.x)*width/r.width));

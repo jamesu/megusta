@@ -1,6 +1,21 @@
 #include "presentation.h"
 #include <GL/gl.h>
 namespace megusta::platform {
+void beginWorldOverlay(const SurfaceTransform& surface,int width,int height) {
+    const auto gui=surface.fit(width,height);
+    glPushAttrib(GL_VIEWPORT_BIT|GL_SCISSOR_BIT|GL_ENABLE_BIT|GL_TRANSFORM_BIT|GL_COLOR_BUFFER_BIT);
+    glViewport(0,0,surface.drawableWidth,surface.drawableHeight);
+    glDisable(GL_SCISSOR_TEST);glDisable(GL_DEPTH_TEST);glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glMatrixMode(GL_PROJECTION);glPushMatrix();glLoadIdentity();
+    glOrtho(-double(gui.x)*width/gui.width,double(surface.drawableWidth-gui.x)*width/gui.width,
+        -double(gui.y)*height/gui.height,double(surface.drawableHeight-gui.y)*height/gui.height,0,1);
+    glMatrixMode(GL_MODELVIEW);glPushMatrix();glLoadIdentity();
+}
+void endWorldOverlay() {
+    glMatrixMode(GL_MODELVIEW);glPopMatrix();
+    glMatrixMode(GL_PROJECTION);glPopMatrix();glPopAttrib();
+}
 void clearLetterboxBars(const SurfaceTransform& surface,int width,int height) {
     if(!surface.enabled())return;
     const auto r=surface.fit(width,height);

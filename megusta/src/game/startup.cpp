@@ -6,6 +6,7 @@
 #include "engine/case_insensitive_path.h"
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <stdexcept>
 #include <sys/stat.h>
 namespace megusta {
@@ -71,6 +72,11 @@ int runGameStartup(int argc,char** argv,ResourceRuntime& resources,GameConfig& c
     config.load(mounts);
     viewport.displayWidth=config.readInt("Prefs","ScreenWidth",640);
     viewport.displayHeight=(viewport.displayWidth*480)/640;
+    viewport.expandGameView=config.readBool("Prefs","ExpandGameView",true);
+    for(int i=1;i<argc;++i) {
+        if(!std::strcmp(argv[i],"-noexpandview"))viewport.expandGameView=false;
+        else if(!std::strcmp(argv[i],"-expandview"))viewport.expandGameView=true;
+    }
     auto& prefs=state.preferences;
     prefs.screenDepth=config.readInt("Prefs","DepthScreen",prefs.screenDepth);
     prefs.zDepth=config.readInt("Prefs","DepthZBuff",prefs.zDepth);
