@@ -20,6 +20,7 @@ bool SdlRuntime::create(const char* title) {
     if (state.created || state.width<=0 || state.height<=0) return false;
     if (SDL_InitSubSystem(subsystems)!=0) { reportError(); return false; }
     initialized=true;
+    SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_WARP_MOTION,"0");
     configureContext();
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24); SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,0);
     unsigned flags=SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE;
@@ -41,6 +42,10 @@ bool SdlRuntime::create(const char* title) {
     return true;
 }
 std::uint32_t SdlRuntime::milliseconds() const { return SDL_GetTicks(); }
+void SdlRuntime::drawableSize(int& width,int& height)const {
+    if(window)SDL_GL_GetDrawableSize(window,&width,&height);
+    else {width=state.width;height=state.height;}
+}
 void SdlRuntime::sleepMicroseconds(std::uint32_t usec) { SDL_Delay((usec+999)/1000); }
 void SdlRuntime::updateModifiers() {
     const auto mods=SDL_GetModState(); state.modifiers=0;
@@ -56,9 +61,19 @@ bool SdlRuntime::pumpEvents() {
         case SDL_QUIT: running=false; break;
         case SDL_WINDOWEVENT:
             switch (event.window.event) {
-            case SDL_WINDOWEVENT_SIZE_CHANGED: state.width=event.window.data1; state.height=event.window.data2; break;
-            case SDL_WINDOWEVENT_FOCUS_GAINED: state.active=true; break;
-            case SDL_WINDOWEVENT_FOCUS_LOST: state.active=false; state.modifiers=0; break;
+            case SDL_WINDOWEVENT_SIZE_CHANGED:
+                state.width=event.window.data1; state.height=event.window.data2;
+                pointer.valid=false;
+                if(cb.pointerReset)cb.pointerReset(cb.context);
+                break;
+            case SDL_WINDOWEVENT_FOCUS_GAINED:
+                state.active=true;pointer.valid=false;
+                if(cb.pointerReset)cb.pointerReset(cb.context);
+                break;
+            case SDL_WINDOWEVENT_FOCUS_LOST:
+                state.active=false; state.modifiers=0;pointer.valid=false;
+                if(cb.pointerReset)cb.pointerReset(cb.context);
+                break;
             case SDL_WINDOWEVENT_MINIMIZED: state.minimized=true; break;
             case SDL_WINDOWEVENT_RESTORED: state.minimized=false; break;
             case SDL_WINDOWEVENT_CLOSE: running=false; break;
@@ -83,12 +98,16 @@ bool SdlRuntime::pumpEvents() {
                 if (*p<128) cb.keyDown(cb.context,*p);
             break;
         case SDL_MOUSEMOTION: {
+            if(!state.active)break;
+            pointer.motion(event.motion.x,event.motion.y,event.motion.xrel,event.motion.yrel,
+                SDL_GetRelativeMouseMode()==SDL_TRUE);
             auto callback=event.motion.state?cb.mouseMotion:cb.passiveMotion;
-            if (callback) callback(cb.context,event.motion.x,event.motion.y); break;
+            if (callback) callback(cb.context,pointer.x,pointer.y); break;
         }
         case SDL_MOUSEBUTTONDOWN: case SDL_MOUSEBUTTONUP: {
             int button=event.button.button==SDL_BUTTON_LEFT?0:event.button.button==SDL_BUTTON_MIDDLE?1:event.button.button==SDL_BUTTON_RIGHT?2:-1;
-            if (button>=0 && cb.mouseButton) cb.mouseButton(cb.context,button,event.type==SDL_MOUSEBUTTONDOWN?0:1,event.button.x,event.button.y);
+            if(SDL_GetRelativeMouseMode()!=SDL_TRUE || !pointer.valid)pointer.reset(event.button.x,event.button.y);
+            if (button>=0 && cb.mouseButton) cb.mouseButton(cb.context,button,event.type==SDL_MOUSEBUTTONDOWN?0:1,pointer.x,pointer.y);
             break;
         }
         default: break;
@@ -104,10 +123,19 @@ void SdlRuntime::finishAndPresent() {
 }
 void SdlRuntime::setCursorMode(CursorMode mode) {
     if (!state.active || (mode!=CursorMode::Released && mode!=CursorMode::Captured)) return;
+    if((SDL_GetRelativeMouseMode()==SDL_TRUE)==(mode==CursorMode::Captured))return;
     if (SDL_SetRelativeMouseMode(mode==CursorMode::Captured?SDL_TRUE:SDL_FALSE)!=0) reportError();
     state.cursorCaptured=SDL_GetRelativeMouseMode()==SDL_TRUE;
 }
-void SdlRuntime::warpCursor(int x,int y) { if (state.active) SDL_WarpMouseInWindow(window,x,y); }
+void SdlRuntime::warpCursor(int x,int y) {
+    pointer.reset(x,y);
+    if(state.active && SDL_GetRelativeMouseMode()!=SDL_TRUE)SDL_WarpMouseInWindow(window,x,y);
+    // Reset the game-side position synchronously as well. Otherwise another
+    // camera tick can subtract its new center from the pre-warp position.
+    // Keep this virtual reset even during fullscreen focus transitions, when
+    // the OS warp/capture cannot run but game idle ticks may still execute.
+    if(callbacks.passiveMotion)callbacks.passiveMotion(callbacks.context,x,y);
+}
 bool SdlRuntime::pollJoystick(JoystickSample& sample) {
     if (joystick && !SDL_JoystickGetAttached(joystick)) { SDL_JoystickClose(joystick); joystick=nullptr; }
     if (!joystick && SDL_NumJoysticks()>0) joystick=SDL_JoystickOpen(0);

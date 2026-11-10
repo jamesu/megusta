@@ -10,9 +10,20 @@
 #include "hud.h"
 #include "console.h"
 #include "pu.h"
+#ifdef MEGUSTA_SDL
+#include "platform/sdl/presentation.h"
+#endif
 namespace megusta {
 Driver gameDriver{};
 DriverViewport driverViewport{};
+platform::PixelRectangle DriverViewport::pixelRectangle()const {
+    if(surface.enabled())return surface.fit(viewportWidth,viewportHeight);
+    return {offsetX,offsetY,scaled?displayWidth:viewportWidth,scaled?displayHeight:viewportHeight};
+}
+platform::PixelRectangle DriverViewport::pixelScissor(int x,int y,int width,int height)const {
+    if(surface.enabled())return surface.toPixels(x,y,width,height,viewportWidth,viewportHeight);
+    return {x,y,width,height};
+}
 void DriverViewport::set(int width,int height,bool scale) {
     if (width<0) width=displayWidth;
     viewportWidth=width;
@@ -22,12 +33,20 @@ void DriverViewport::set(int width,int height,bool scale) {
     if (scale) { offsetX=0; offsetY=0; }
 }
 void DriverViewport::mapMouse(int& x,int& y) const {
+    if(surface.enabled()) {
+        surface.toCanvas(x,y,viewportWidth,viewportHeight);
+        y+=displayHeight-viewportHeight;return;
+    }
     if (displayWidth>640) {
         if (scaled) { x=(x*viewportWidth)/displayWidth; y=(y*viewportHeight)/displayHeight; y=(y-viewportHeight)+displayHeight; }
         else { x-=offsetX; y+=offsetY; }
     }
 }
 void DriverViewport::unmapMouse(int& x,int& y) const {
+    if(surface.enabled()) {
+        y-=displayHeight-viewportHeight;
+        surface.toWindow(x,y,viewportWidth,viewportHeight);return;
+    }
     // Platform cursor warps take client coordinates. GUI callers supply the
     // coordinates produced by mapMouse, including its display-height offset.
     if(displayWidth>640) {
@@ -50,9 +69,8 @@ void Driver::setup2dProjection(DriverViewport& v,HoleRenderServices& r) {
     r.texEnvi(r.context,0x48,0x49,0x56);
     r.colorMask(r.context,true,true,true,true); r.depthMask(r.context,true);
     r.depthRange(r.context,0.0,1.0);
-    int width=v.scaled ? v.displayWidth : v.viewportWidth;
-    int height=v.scaled ? v.displayHeight : v.viewportHeight;
-    r.viewport(r.context,v.offsetX,v.offsetY,width,height); r.matrixMode(r.context,0xf); r.loadIdentity(r.context);
+    const auto rectangle=v.pixelRectangle();
+    r.viewport(r.context,rectangle.x,rectangle.y,rectangle.width,rectangle.height); r.matrixMode(r.context,0xf); r.loadIdentity(r.context);
     r.ortho(r.context,0.0,static_cast<float>(v.viewportWidth),0.0,static_cast<float>(v.viewportHeight),0.0,1.0);
     r.matrixMode(r.context,0xe); r.loadIdentity(r.context);
 }
@@ -72,6 +90,8 @@ void Driver::frame(DriverServices& s) {
         r.clearFlags(r.context,3); r.disable(r.context,0x21); s.gui.drawShellBackground();
         s.displayWidgets(s.context,-9999,-1); networkServiceEnd();
     }
+    const auto sceneRectangle=s.viewport.pixelRectangle();
+    r.viewport(r.context,sceneRectangle.x,sceneRectangle.y,sceneRectangle.width,sceneRectangle.height);
     setup3dRenderState(r); s.hole.draw(s.holeServices); s.gui.drawRoot();
     networkServiceEnd(); setup2dProjection(s.viewport,r);
     if (fpsOverlayEnabled) drawPerformanceOverlay(guiFonts.primary,s.clock,s.viewport.displayWidth,
@@ -86,6 +106,9 @@ void Driver::frame(DriverServices& s) {
 #endif
     s.holeServices.runtime.tasks.scheduledTasks.runDrawCallbacks(s.holeServices.runtime.tasks);
     drawGuiTooltip(); s.console.drawOverlay(); flushGuiScenePreview(); networkServiceEnd();
+#ifdef MEGUSTA_SDL
+    platform::clearLetterboxBars(s.viewport.surface,s.viewport.viewportWidth,s.viewport.viewportHeight);
+#endif
     networkServiceEnd();
 }
 void Driver::idleUpdate(DriverServices& s) {

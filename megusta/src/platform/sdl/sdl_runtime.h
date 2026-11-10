@@ -1,5 +1,6 @@
 #pragma once
 #include "../runtime.h"
+#include "pointer_state.h"
 #ifdef MEGUSTA_SDL
 struct SDL_Window;
 struct _SDL_Joystick;
@@ -9,6 +10,7 @@ public:
     SdlRuntime()=default;
     ~SdlRuntime() override;
     bool create(const char*) override;
+    void drawableSize(int&,int&)const override;
     Capabilities capabilities() const override { return {false,true,true,false,true}; }
     bool pumpEvents() override;
     void finishAndPresent() override;
@@ -29,6 +31,7 @@ protected:
     virtual void contextCreated() {}
     virtual void contextClosing() {}
     virtual void stopMainLoop() {}
+    SdlPointerState pointer;
     SDL_Window* window=nullptr;
     _SDL_Joystick* joystick=nullptr;
     void* context=nullptr;

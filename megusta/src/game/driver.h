@@ -1,10 +1,14 @@
 #pragma once
 #include "hole.h"
 #include "engine/runtime_adapters.h"
+#include "platform/surface_transform.h"
 namespace megusta {
 struct DriverViewport {
     int displayWidth,displayHeight,viewportWidth,viewportHeight,offsetX,offsetY;
     bool scaled;
+    platform::SurfaceTransform surface;
+    platform::PixelRectangle pixelRectangle()const;
+    platform::PixelRectangle pixelScissor(int x,int y,int width,int height)const;
     void set(int width,int height,bool scale);
     void mapMouse(int& x,int& y) const;
     void unmapMouse(int& x,int& y) const;

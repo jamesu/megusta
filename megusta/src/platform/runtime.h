@@ -20,6 +20,7 @@ struct Callbacks {
     void (*passiveMotion)(void*,int,int)=nullptr;
     void (*joystick)(void*,std::uint32_t,int,const float*)=nullptr;
     void (*error)(void*,const char*)=nullptr;
+    void (*pointerReset)(void*)=nullptr;
 };
 struct WindowState {
     int width=0,height=0;
@@ -41,6 +42,7 @@ struct Capabilities { bool nativeWindow,graphics,cursorWarp,processPriority,bloc
 class Runtime {
 public:
     virtual ~Runtime()=default;
+    virtual void drawableSize(int& width,int& height)const { width=state.width;height=state.height; }
     WindowState state;
     Callbacks callbacks;
     void setInitialSize(int,int);

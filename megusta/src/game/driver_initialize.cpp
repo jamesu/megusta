@@ -90,7 +90,7 @@ void Driver::initialize(DriverInitialization& s) {
     puSetNativeWindow(static_cast<HWND>(s.callbacks.runtime.nativeWindowHandle()));
 #elif defined(MEGUSTA_SDL)
     puSetNativeWindow(nullptr);
-    puSetWindowSize(s.callbacks.runtime.state.width,s.callbacks.runtime.state.height);
+    puSetWindowSize(s.callbacks.services.viewport.displayWidth,s.callbacks.services.viewport.displayHeight);
 #endif
     puSetDefaultFonts(puFont(s.primaryFont,18.0f,0.0f),puFont(s.primaryFont,18.0f,0.0f));
     // 00460e40 writes 005074f0, subsequently copied into widget.style by

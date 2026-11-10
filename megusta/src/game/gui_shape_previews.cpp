@@ -1,5 +1,6 @@
 #include "gui_shape_previews.h"
 #include "gui.h"
+#include "driver.h"
 #include "gui_runtime.h"
 #include "gui_render.h"
 #include "game_coordinate_system.h"
@@ -122,7 +123,8 @@ void guiSystem::drawShapePreviews() {
     dts::dtsDisplayListsEnabled=false; dts::dtsSkinDisplayListsEnabled=false;
     auto& gl=guiRuntime->renderer->gl;
     for (auto& preview:shapePreviews) if (preview.displayName[0] != '\0' && preview.shapeAdapter) {
-        gl.enable(0x66); gl.scissor(preview.screen[0],preview.screen[1],preview.screen[2],preview.screen[3]);
+        const auto clip=driverViewport.pixelScissor(preview.screen[0],preview.screen[1],preview.screen[2],preview.screen[3]);
+        gl.enable(0x66); gl.scissor(clip.x,clip.y,clip.width,clip.height);
         if (preview.clearBackground) { gl.clearColor(preview.backgroundColour[0],preview.backgroundColour[1],preview.backgroundColour[2],1); gl.clearFlags(2); }
         auto* context=ssgGetCurrentContext(); float width,height; sgMat4 savedView,camera,converted,model,basis;
         context->getFOV(&width,&height); context->getModelviewMatrix(savedView); context->setFOV(60,0);

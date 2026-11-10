@@ -26,7 +26,11 @@ void Driver::mouseButtonCallback(int button,int state,int x,int y,DriverInputSer
         if (!s.config.mouseJump()) s.disableWarpCursorOnTab(s.context);
         if (s.scripts.autorun.inputGate(*this,s.scripts,s.scripts.autorunServices)) return;
     }
-    s.viewport.mapMouse(x,y); s.puiMouseButton(s.context,button,state,x,y);
+    s.viewport.mapMouse(x,y);
+    const int canvasY=y-s.viewport.displayHeight+s.viewport.viewportHeight;
+    if(s.viewport.surface.enabled() && state==0 &&
+       (x<0 || x>=s.viewport.viewportWidth || canvasY<0 || canvasY>=s.viewport.viewportHeight))return;
+    s.puiMouseButton(s.context,button,state,x,y);
     s.input.setMouseButton(button,state,x,y,s.inputServices);
 }
 void Driver::mouseMotionCallback(int x,int y,DriverInputServices& s) {

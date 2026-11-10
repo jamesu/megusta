@@ -87,6 +87,9 @@ int runGameStartup(int argc,char** argv,ResourceRuntime& resources,GameConfig& c
     platform.initializeFromArgs(argc,argv);
     prefs.screenDepth=platform.state.colorBits; // -bitdepth overrides the loaded preference.
     platform.setInitialSize(viewport.displayWidth,viewport.displayHeight);
+    // Keep the configured 4:3 display dimensions as the gameplay canvas.
+    // Menu scripts select their separate 640x480 viewport. SDL fits either
+    // logical canvas into the current drawable without changing these values.
     platform.create("Minigolf Maniacs"); // Original caller ignores its result.
     if (host.movieCleanup) host.movieCleanup(host.context,"Minigolf Maniacs",0x12); else engine_movie::registerMovieCleanup();
     audio::initialize(&argc,argv);

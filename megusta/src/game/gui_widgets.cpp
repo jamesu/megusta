@@ -1,4 +1,5 @@
 #include "gui_widgets.h"
+#include "driver.h"
 #include "gui_runtime.h"
 #include "gui_render.h"
 #include "scene_runtime.h"
@@ -200,7 +201,10 @@ void GuiSceneButton::renderPreview() {
     context->getFOV(&width,&height); context->getModelviewMatrix(savedView);
     sgCoord origin={{0,0,0},{0,0,0}}; context->setCamera(&origin); context->setFOV(45.000103f,0);
     gl.clearFlags(1);
-    if (scissorEnabled) { gl.enable(0x66); gl.scissor(scissor[0],scissor[1],scissor[2],scissor[3]); }
+    if (scissorEnabled) {
+        const auto clip=driverViewport.pixelScissor(scissor[0],scissor[1],scissor[2],scissor[3]);
+        gl.enable(0x66); gl.scissor(clip.x,clip.y,clip.width,clip.height);
+    }
     gl.enable(0x21); ssgCullAndDraw(sceneRoot); gl.disable(0x21);
     if (scissorEnabled) gl.disable(0x66);
     context->setFOV(width,height); context->setModelviewMatrix(savedView);
