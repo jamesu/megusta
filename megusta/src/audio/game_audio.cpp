@@ -13,12 +13,9 @@ void bindApi(const OpenALApi& table) { selectedApi=&table; }
 const OpenALApi& api() {
 #ifdef MEGUSTA_AUDIO_DEFAULT_DIRECTSOUND
     return selectedApi ? *selectedApi : directSoundApi();
-#elif defined(MEGUSTA_AUDIO_DEFAULT_BROWSER)
-    extern const OpenALApi& browserWebAudioApi();
-    return selectedApi ? *selectedApi : browserWebAudioApi();
-#elif defined(MEGUSTA_AUDIO_DEFAULT_NATIVE)
-    extern const OpenALApi& nativeOpenALApi();
-    return selectedApi ? *selectedApi : nativeOpenALApi();
+#elif defined(MEGUSTA_AUDIO_DEFAULT_SDL)
+    extern const OpenALApi& sdlMixerApi();
+    return selectedApi ? *selectedApi : sdlMixerApi();
 #else
     return *selectedApi; // External-backend builds require bindApi before use.
 #endif

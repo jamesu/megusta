@@ -1,11 +1,6 @@
-#include "browser_audio_stream.h"
+#include "stream_decoder.h"
 #include "wave.h"
 #include "engine/resource_file.h"
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#else
-#define EMSCRIPTEN_KEEPALIVE
-#endif
 #include <algorithm>
 #include <memory>
 #include <unordered_map>
@@ -23,7 +18,6 @@ struct Stream {
     std::vector<float> output;
 };
 std::unordered_map<Handle,std::unique_ptr<Stream>> streams;
-unsigned lastCount=0;
 bool readExact(ResourceFile& file,void* data,unsigned bytes){return file.read(data,1,bytes)==bytes;}
 bool parse(Stream& s){
     auto& f=*s.file;f.seek(0,SEEK_END);const int size=f.tell();f.seek(0,SEEK_SET);
@@ -80,33 +74,33 @@ bool decodeBlock(Stream& s,unsigned blockIndex){
     return true;
 }
 }
-bool registerBrowserStream(Handle h,ResourceFile* file,BrowserStreamInfo& info){
-    auto s=std::make_unique<Stream>();s->file.reset(file);
+bool registerStream(Handle h,ResourceFile* file,StreamInfo& info){
+    std::unique_ptr<ResourceFile> owner(file);
+    auto s=std::make_unique<Stream>();s->file=std::move(owner);
     if(!file || !parse(*s))return false;
     info={s->channels,s->rate,s->frames};streams[h]=std::move(s);return true;
 }
-void releaseBrowserStream(Handle h){streams.erase(h);}
-void releaseBrowserStreams(){streams.clear();}
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned megusta_web_stream_count(){return lastCount;}
-extern "C" EMSCRIPTEN_KEEPALIVE const float* megusta_web_stream_read(unsigned h,unsigned frame,unsigned requested){
-    lastCount=0;auto it=streams.find(h);if(it==streams.end())return nullptr;
+void releaseStream(Handle h){streams.erase(h);}
+void releaseStreams(){streams.clear();}
+const float* readStreamChunk(Handle h,unsigned frame,unsigned requested,unsigned& count){
+    count=0;auto it=streams.find(h);if(it==streams.end())return nullptr;
     auto& s=*it->second;if(frame>=s.frames || !requested)return nullptr;
-    const unsigned count=std::min({requested,s.frames-frame,std::max(1u,s.rate*3/16)});
-    s.output.resize(count*s.channels);
+    const unsigned frames=std::min({requested,s.frames-frame,std::max(1u,s.rate*3/16)});
+    s.output.resize(frames*s.channels);
     if(s.tag==1){
-        s.bytes.resize(count*s.align);s.file->seek(s.dataOffset+frame*s.align,SEEK_SET);
+        s.bytes.resize(frames*s.align);s.file->seek(s.dataOffset+frame*s.align,SEEK_SET);
         if(!readExact(*s.file,s.bytes.data(),s.bytes.size()))return nullptr;
-        for(unsigned i=0;i<count*s.channels;++i)s.output[i]=s.bits==8?(int(s.bytes[i])-128)/128.0f:static_cast<short>(u16(s.bytes.data()+i*2))/32768.0f;
+        for(unsigned i=0;i<frames*s.channels;++i)s.output[i]=s.bits==8?(int(s.bytes[i])-128)/128.0f:static_cast<short>(u16(s.bytes.data()+i*2))/32768.0f;
     }else{
         unsigned written=0;
-        while(written<count){
+        while(written<frames){
             const unsigned blockIndex=frame/s.samplesPerBlock,within=frame%s.samplesPerBlock;
             if(!decodeBlock(s,blockIndex))return nullptr;
-            const unsigned take=std::min(count-written,s.samplesPerBlock-within);
+            const unsigned take=std::min(frames-written,s.samplesPerBlock-within);
             for(unsigned i=0;i<take*s.channels;++i)s.output[written*s.channels+i]=s.block[within*s.channels+i]/32768.0f;
             written+=take;frame+=take;
         }
     }
-    lastCount=count;return s.output.data();
+    count=frames;return s.output.data();
 }
 }
