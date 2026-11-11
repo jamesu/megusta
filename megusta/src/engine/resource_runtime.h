@@ -42,6 +42,7 @@ public:
     ResourceRuntime(const ResourceRuntime&) = delete;
     ResourceRuntime& operator=(const ResourceRuntime&) = delete;
     void initializeFromArgs(int argc, const char* const* argv);
+    bool applyDefaultMod(const char* path, int argc, const char* const* argv);
     ResourceMountTable& mounts() { return mounts_; }
     LogCapture& capture() { return capture_; }
     SharedIoServices& services() { return services_; }

@@ -70,6 +70,10 @@ int runGameStartup(int argc,char** argv,ResourceRuntime& resources,GameConfig& c
     mounts.add("/tmp/",startup_literals::resourcePath);
     parseStartupArguments(argc,argv,state,host);
     config.load(mounts);
+    // Compatibility preference; the original only selected mods on the CLI.
+    const char* defaultMod=config.readString("Prefs","DefaultMod","");
+    if (!resources.applyDefaultMod(defaultMod,argc,argv))
+        std::fprintf(stderr,"Could not mount configured DefaultMod: %s\n",defaultMod);
     viewport.displayWidth=config.readInt("Prefs","ScreenWidth",640);
     viewport.displayHeight=(viewport.displayWidth*480)/640;
     viewport.expandGameView=config.readBool("Prefs","ExpandGameView",true);

@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <sys/stat.h>
+#include <algorithm>
 #include "../game/config_literals.h"
 namespace megusta {
 namespace {
@@ -40,6 +41,13 @@ bool ResourceMountTable::add(const char* virtualPrefix, const char* physicalPath
     entry.virtualPrefix = virtualPrefix;
     entry.physicalPath = physicalPath;
     entry.archive = std::move(archive);
+    return true;
+}
+// Compatibility: configured defaults are discovered after loading the config,
+// but must override base assets just like the original early -mod mounts.
+bool ResourceMountTable::prepend(const char* virtualPrefix, const char* physicalPath) {
+    if (!add(virtualPrefix,physicalPath)) return false;
+    std::rotate(entries_.begin(),entries_.begin()+entryCount_-1,entries_.begin()+entryCount_);
     return true;
 }
 // 0043b080: prefix matching is insensitive and does not require a separator.

@@ -63,4 +63,11 @@ void ResourceRuntime::initializeFromArgs(int argc, const char* const* argv) {
             mounts_.add("data/", argv[++i]);
     }
 }
+bool ResourceRuntime::applyDefaultMod(const char* path, int argc, const char* const* argv) {
+    // Preserve explicit mod ordering and suppress the configured fallback even
+    // when a supplied command-line mod cannot be mounted.
+    for (int i=1;i+1<argc;++i)
+        if (!strings::compareInsensitive(argv[i],config_literals::mountOption)) return true;
+    return !path || !*path || mounts_.prepend("data/",path);
+}
 }
