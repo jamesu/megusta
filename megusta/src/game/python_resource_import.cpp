@@ -1,6 +1,8 @@
 #include "python_resource_import.h"
 #include "engine/resource_runtime.h"
 #include "Python.h"
+#include "compile.h"
+#include "marshal.h"
 #include <string>
 #include <cstring>
 namespace megusta {
@@ -95,18 +97,46 @@ PyObject* mountedImport(PyObject* stockImport,PyObject* args) {
     if(!PyArg_ParseTuple(args,"s|OOO:__import__",&name,&globals,&locals,&from))return nullptr;
     PyObject* loaded=PyDict_GetItemString(PyImport_GetModuleDict(),name);
     if(loaded) { Py_INCREF(loaded);return loaded; }
-    std::string path="data/";path+=name;path+=".py";
-    // CPython's string parser expects normalized newlines. The mounted text
-    // stream provides the original Windows CRT CRLF/Ctrl-Z translation.
-    ResourceFile* file=sharedIo?sharedIo->open(path.c_str(),"rt"):nullptr;
+    std::string stem="data/";stem+=name;
+    std::string sourcePath=stem+".py",compiledPath=stem+(Py_OptimizeFlag?".pyo":".pyc");
+    const char* paths[]={sourcePath.c_str(),compiledPath.c_str()};
+    std::size_t selected=0;
+    auto* mounts=ResourceRuntime::activeMounts();
+    auto file=mounts?mounts->openFirst(paths,2,"rb",&selected):nullptr;
     if(!file)return PyObject_CallObject(stockImport,args);
     std::string source;char block[4096];std::uint32_t count;
     while((count=file->read(block,1,sizeof(block)))!=0)source.append(block,count);
-    sharedIo->close(file);
-    // File parsing accepts an unterminated final line; Py_CompileString in
-    // Python 1.5.2 requires the equivalent terminating NEWLINE token.
-    if(source.empty() || source.back()!='\n')source+='\n';
-    PyObject* code=Py_CompileString(const_cast<char*>(source.c_str()),const_cast<char*>(path.c_str()),Py_file_input);
+    file.reset();
+    const std::string& path=selected?compiledPath:sourcePath;
+    PyObject* code=nullptr;
+    if (selected) {
+        // Python 1.5.2 caches have a four-byte little-endian magic followed
+        // by a four-byte source timestamp, then a marshalled code object.
+        unsigned long magic=0;
+        if(source.size()>=8)for(unsigned i=0;i<4;++i)
+            magic|=static_cast<unsigned long>(static_cast<unsigned char>(source[i]))<<(8*i);
+        if(source.size()<8 || magic!=static_cast<unsigned long>(PyImport_GetMagicNumber())) {
+            PyErr_Format(PyExc_ImportError,"Bad Python bytecode header: %s",path.c_str());return nullptr;
+        }
+        code=PyMarshal_ReadObjectFromString(source.data()+8,static_cast<int>(source.size()-8));
+        if(code && !PyCode_Check(code)) {
+            Py_DECREF(code);PyErr_Format(PyExc_ImportError,"Not a Python code object: %s",path.c_str());return nullptr;
+        }
+    } else {
+        // POSIX loose files do not get the Windows CRT text-mode conversion that
+        // archive text streams receive. Normalize both paths before compiling.
+        std::size_t output=0;
+        for(std::size_t i=0;i<source.size();++i) {
+            char c=source[i];if(c=='\x1a')break;
+            if(c=='\r') { if(i+1<source.size() && source[i+1]=='\n')++i;c='\n'; }
+            source[output++]=c;
+        }
+        source.resize(output);
+        // File parsing accepts an unterminated final line; Py_CompileString in
+        // Python 1.5.2 requires the equivalent terminating NEWLINE token.
+        if(source.empty() || source.back()!='\n')source+='\n';
+        code=Py_CompileString(const_cast<char*>(source.c_str()),const_cast<char*>(path.c_str()),Py_file_input);
+    }
     if(!code)return nullptr;
     PyObject* module=PyImport_ExecCodeModule(name,code);Py_DECREF(code);return module;
 }

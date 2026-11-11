@@ -118,6 +118,23 @@ target_link_libraries(megusta_probe PRIVATE megusta_png)
 include(cmake/PLIB.cmake)
 if(WIN32 OR MEGUSTA_NATIVE_SDL OR (EMSCRIPTEN AND MEGUSTA_BROWSER))
   include(cmake/CPython.cmake)
+  if(NOT EMSCRIPTEN)
+    enable_testing()
+    add_executable(megusta_python_resource_import_check
+      tests/python_resource_import_check.cpp src/game/python_resource_import.cpp
+      src/game/game_config.cpp src/engine/resource_runtime.cpp
+      src/engine/resource_mount.cpp src/engine/resource_file.cpp
+      src/engine/mapped_resource_index.cpp src/engine/log_capture.cpp
+      src/engine/string_services.cpp src/engine/directory_services.cpp)
+    target_include_directories(megusta_python_resource_import_check PRIVATE src)
+    target_link_libraries(megusta_python_resource_import_check PRIVATE megusta_python)
+    if(WIN32 AND NOT CMAKE_HOST_WIN32)
+      add_test(NAME python_resource_import COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_dts_ctest.py"
+        "$<TARGET_FILE:megusta_python_resource_import_check>")
+    else()
+      add_test(NAME python_resource_import COMMAND megusta_python_resource_import_check)
+    endif()
+  endif()
 endif()
 function(megusta_apply_vc6_x87_model target)
   if(NOT MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -233,6 +250,11 @@ if((EMSCRIPTEN AND MEGUSTA_BROWSER) OR MEGUSTA_NATIVE_SDL)
   target_include_directories(megusta_audio PUBLIC src)
   target_compile_definitions(megusta_audio PRIVATE MEGUSTA_AUDIO_DEFAULT_SDL)
   if(EMSCRIPTEN)
+    target_sources(megusta_audio PRIVATE src/platform/browser/audio_output.cpp)
+    target_link_options(megusta_audio INTERFACE
+      "SHELL:--js-library ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/browser/audio_output.js")
+    set_property(TARGET megusta_audio APPEND PROPERTY INTERFACE_LINK_DEPENDS
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/platform/browser/audio_output.js")
     target_compile_options(megusta_audio PRIVATE "-sUSE_SDL=2")
     target_link_options(megusta_audio INTERFACE "-sUSE_SDL=2")
   else()
@@ -246,6 +268,12 @@ if((EMSCRIPTEN AND MEGUSTA_BROWSER) OR MEGUSTA_NATIVE_SDL)
       add_test(NAME ${audio_check} COMMAND megusta_${audio_check}_check)
       set_tests_properties(${audio_check} PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
     endforeach()
+  endif()
+  find_program(MEGUSTA_NODE_EXECUTABLE node)
+  if(MEGUSTA_NODE_EXECUTABLE)
+    enable_testing()
+    add_test(NAME browser_audio_output COMMAND "${MEGUSTA_NODE_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/browser_audio_output_check.cjs")
   endif()
 endif()
 add_executable(megusta_plib_check tests/plib_core.cpp)

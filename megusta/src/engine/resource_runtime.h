@@ -37,6 +37,7 @@ struct SharedIoServices {
 extern SharedIoServices* sharedIo;
 class ResourceRuntime {
 public:
+    static ResourceMountTable* activeMounts() noexcept;
     ResourceRuntime();
     ~ResourceRuntime();
     ResourceRuntime(const ResourceRuntime&) = delete;

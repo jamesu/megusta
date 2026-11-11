@@ -52,6 +52,9 @@ ResourceRuntime::ResourceRuntime()
 ResourceRuntime::~ResourceRuntime() {
     if (activeRuntime == this) { activeRuntime = nullptr; sharedIo = nullptr; }
 }
+ResourceMountTable* ResourceRuntime::activeMounts() noexcept {
+    return activeRuntime?&activeRuntime->mounts():nullptr;
+}
 // 0043a5d0: initialize capture, publish the shared wrappers, then apply -mod mounts.
 void ResourceRuntime::initializeFromArgs(int argc, const char* const* argv) {
     capture_.initializeFromArgs(argc, argv);

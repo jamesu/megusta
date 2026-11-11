@@ -63,34 +63,43 @@ const char* ResourceMountEntry::translatePrefix(const char* path) const {
 namespace megusta {
 // 0043a480: search only registered mounts, preserving their insertion order.
 std::unique_ptr<ResourceFile> ResourceMountTable::open(const char* path, const char* mode) const {
+    return openFirst(&path,1,mode);
+}
+std::unique_ptr<ResourceFile> ResourceMountTable::openFirst(const char* const* paths,
+    std::size_t count,const char* mode,std::size_t* selected) const {
     for (int i = 0; i < entryCount_; ++i) {
         const ResourceMountEntry& mount = entries_[i];
-        const char* translated = mount.translatePrefix(path);
-        if (!translated) continue;
-        if (!mount.archive) {
-            if (auto* file = engine_filesystem::openFileCaseInsensitive(translated, mode))
-                return std::unique_ptr<ResourceFile>(new ResourceFile(file));
-        } else if (std::strchr(mode, 'r')) {
-            const void* data;
-            std::uint32_t size;
-            if (!mount.archive->findResource(translated, &data, &size)) continue;
-            void* owned = nullptr;
-            if (!std::strchr(mode, 'b')) {
-                const auto* start = static_cast<const unsigned char*>(data);
-                const auto* endMarker = static_cast<const unsigned char*>(std::memchr(start, 0x1a, size));
-                if (endMarker) size = static_cast<std::uint32_t>(endMarker - start);
-                owned = std::malloc(size);
-                auto* output = static_cast<unsigned char*>(owned);
-                const auto* end = start + size;
-                while (start != end) {
-                    if (*start == '\r' && start + 1 != end && start[1] == '\n') {
-                        *output++ = '\n'; start += 2;
-                    } else *output++ = *start++;
+        for (std::size_t candidate=0;candidate<count;++candidate) {
+            const char* translated = mount.translatePrefix(paths[candidate]);
+            if (!translated) continue;
+            if (!mount.archive) {
+                if (auto* file = engine_filesystem::openFileCaseInsensitive(translated, mode)) {
+                    if (selected) *selected=candidate;
+                    return std::unique_ptr<ResourceFile>(new ResourceFile(file));
                 }
-                data = owned;
-                size = static_cast<std::uint32_t>(output - static_cast<unsigned char*>(owned));
+            } else if (std::strchr(mode, 'r')) {
+                const void* data;
+                std::uint32_t size;
+                if (!mount.archive->findResource(translated, &data, &size)) continue;
+                void* owned = nullptr;
+                if (!std::strchr(mode, 'b')) {
+                    const auto* start = static_cast<const unsigned char*>(data);
+                    const auto* endMarker = static_cast<const unsigned char*>(std::memchr(start, 0x1a, size));
+                    if (endMarker) size = static_cast<std::uint32_t>(endMarker - start);
+                    owned = std::malloc(size);
+                    auto* output = static_cast<unsigned char*>(owned);
+                    const auto* end = start + size;
+                    while (start != end) {
+                        if (*start == '\r' && start + 1 != end && start[1] == '\n') {
+                            *output++ = '\n'; start += 2;
+                        } else *output++ = *start++;
+                    }
+                    data = owned;
+                    size = static_cast<std::uint32_t>(output - static_cast<unsigned char*>(owned));
+                }
+                if (selected) *selected=candidate;
+                return std::unique_ptr<ResourceFile>(new ResourceFile(data, static_cast<std::int32_t>(size), owned));
             }
-            return std::unique_ptr<ResourceFile>(new ResourceFile(data, static_cast<std::int32_t>(size), owned));
         }
     }
     return nullptr;

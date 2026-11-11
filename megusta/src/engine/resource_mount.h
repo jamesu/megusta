@@ -19,6 +19,10 @@ public:
     bool add(const char* virtualPrefix, const char* physicalPath);
     bool prepend(const char* virtualPrefix, const char* physicalPath);
     std::unique_ptr<ResourceFile> open(const char* path, const char* mode) const;
+    // Try suffix alternatives within each mount before falling back to a lower
+    // priority mount (e.g. a mod's bytecode must override base Python source).
+    std::unique_ptr<ResourceFile> openFirst(const char* const* paths, std::size_t count,
+        const char* mode, std::size_t* selected = nullptr) const;
     int queryStat(const char* path, ResourceStatus& status) const;
 private:
     std::array<ResourceMountEntry, 20> entries_;
