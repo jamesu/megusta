@@ -52,8 +52,7 @@
       "binaryDir": "${sourceDir}/build/win64-vs",
       "cacheVariables": {
         "CMAKE_CONFIGURATION_TYPES": "Debug;RelWithDebInfo",
-        "MEGUSTA_ENABLE_ASAN": "OFF",
-        "MEGUSTA_GAME_PRESERVE_LAUNCH_CWD": "ON"
+        "MEGUSTA_ENABLE_ASAN": "OFF"
       }
     },
     {
@@ -67,8 +66,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "MEGUSTA_NATIVE_SDL": "ON",
-        "MEGUSTA_GAME_PRESERVE_LAUNCH_CWD": "ON"
+        "MEGUSTA_NATIVE_SDL": "ON"
       }
     },
     {
@@ -82,8 +80,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "MEGUSTA_NATIVE_SDL": "ON",
-        "MEGUSTA_GAME_PRESERVE_LAUNCH_CWD": "ON"
+        "MEGUSTA_NATIVE_SDL": "ON"
       }
     }
   ],

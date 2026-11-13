@@ -2,6 +2,7 @@
 
 #pragma once
 #include <cstddef>
+#include <cstddef>
 #include <ctime>
 
 #if (defined(__i386__) || defined(_M_IX86)) && (defined(__GNUC__) || defined(__clang__))
@@ -20,10 +21,15 @@ struct LaunchServices {
     int (*openUrl)(void*,const char*)=nullptr;
     int (*execute)(void*,const char*,const char* const*)=nullptr;
     const char* (*executablePath)(void*)=nullptr;
+    // Optional ordered platform-specific startup locations, such as an app
+    // bundle's Resources directory. Return nullptr when index is exhausted.
+    const char* (*startupDirectory)(void*,std::size_t index)=nullptr;
 };
 void bindLaunchServices(const LaunchServices&);
 void bindLaunchWindow(void* window);
 const char* currentExecutablePath();
+const char* tryCurrentExecutablePath();
+const char* platformStartupDirectory(std::size_t index);
 
 void ssgAllocation_free_adapter(void* allocation);
 [[noreturn]] void engineRuntime_fatalExit_impl();

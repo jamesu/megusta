@@ -13,8 +13,6 @@ include(cmake/AddressSanitizer.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(MEGUSTA_DTS_ENABLE_ABI_WRAPPERS
   "Link DTS address/ABI entry wrappers into megusta_scene_inspect" OFF)
-option(MEGUSTA_GAME_PRESERVE_LAUNCH_CWD
-  "Preserve the debugger/launcher working directory instead of changing to the executable directory" OFF)
 set(MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY "" CACHE PATH
   "Optional Visual Studio debugger working directory for megusta_game")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -506,9 +504,6 @@ if(MEGUSTA_BUILD_SSG)
       "-sSTACK_SIZE=1048576" "-sSTACK_OVERFLOW_CHECK=2"
       "SHELL:-s FULL_ES2=1" "SHELL:-s MIN_WEBGL_VERSION=1" "SHELL:-s MAX_WEBGL_VERSION=1")
     megusta_package_assets(megusta_game)
-  endif()
-  if(MEGUSTA_GAME_PRESERVE_LAUNCH_CWD)
-    target_compile_definitions(megusta_game PRIVATE MEGUSTA_GAME_PRESERVE_LAUNCH_CWD=1)
   endif()
   if(MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY)
     if(NOT IS_DIRECTORY "${MEGUSTA_VS_DEBUGGER_WORKING_DIRECTORY}")

@@ -12,8 +12,9 @@ tools/testing/build_native_sdl.sh
 tools/testing/run_native_sdl.sh /path/to/MGM -window -nointro
 ```
 
-The launcher copies assets into `build/<platform>/run/`. Existing session
-files are preserved, so update that copy when changing assets or preferences.
+Pass the game folder to the launcher. It changes into that folder before
+starting the built executable, so `MINIGOLF.CFG` and relative asset paths are
+resolved there. Use a writable game folder if the game needs to save settings.
 
 ## Windows x64
 
@@ -46,7 +47,9 @@ changing them, then reload the page.
 
 ## Configuration
 
-Native runs read `MINIGOLF.CFG` from the working asset directory. To select
+Native runs select the first startup directory containing `MINIGOLF.CFG`,
+checking the executable folder before platform-provided locations and the
+launch working directory. To select
 a default mod:
 
 ```ini

@@ -34,13 +34,24 @@ const char* const directInputMessages[]={
 
 void bindLaunchServices(const LaunchServices& services) { launchServices=services; }
 void bindLaunchWindow(void* window) { launchServices.window=window; }
-const char* currentExecutablePath() {
+const char* tryCurrentExecutablePath() {
 #ifdef _WIN32
-    static char path[260]; GetModuleFileNameA(nullptr,path,sizeof(path)); return path;
+    static char path[260];
+    const DWORD length=GetModuleFileNameA(nullptr,path,sizeof(path));
+    if (length==0 || length>=sizeof(path)) return nullptr;
+    return path;
 #else
     if (launchServices.executablePath) return launchServices.executablePath(launchServices.context);
-    throw std::logic_error("Configuration launching requires the platform executable path");
+    return nullptr;
 #endif
+}
+const char* currentExecutablePath() {
+    if (const char* path=tryCurrentExecutablePath()) return path;
+    throw std::logic_error("Configuration launching requires the platform executable path");
+}
+const char* platformStartupDirectory(std::size_t index) {
+    if (!launchServices.startupDirectory) return nullptr;
+    return launchServices.startupDirectory(launchServices.context,index);
 }
 void ssgAllocation_free_adapter(void* allocation) { std::free(allocation); }
 [[noreturn]] void engineRuntime_fatalExit_impl() { std::exit(1); }
