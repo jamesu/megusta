@@ -6,13 +6,11 @@ namespace megusta::platform {
 namespace { Runtime* active=nullptr;
 Runtime& platform() { if (!active) throw std::logic_error("Game platform adapter is not bound"); return *active; }
 void syncSurface(DriverPlatformBinding& binding) {
-#ifdef MEGUSTA_SDL
     auto& surface=binding.services.viewport.surface;
     int width=0,height=0;binding.runtime.drawableSize(width,height);
+    // Keep GUI placement and mouse mapping in drawable pixels on both WGL
+    // and SDL; SDL's drawable can differ from its window size on HiDPI displays.
     surface={binding.runtime.state.width,binding.runtime.state.height,width,height};
-#else
-    (void)binding;
-#endif
 }
 }
 void bindGamePlatform(Runtime* runtime) { active=runtime; }
@@ -27,9 +25,7 @@ int gameSystemProperty(int code) { return platform().systemProperty(code); }
 std::uint32_t gameModifiers() { return static_cast<std::uint32_t>(platform().activeModifiers()); }
 void gameSetCursorMode(int mode) { platform().setCursorMode(static_cast<CursorMode>(mode)); }
 void gameWarpCursor(int x,int y) {
-#ifdef MEGUSTA_SDL
     driverViewport.unmapMouse(x,y);
-#endif
     platform().warpCursor(x,y);
 }
 void gameEnableJoystick(bool enabled) { platform().registerJoystick(enabled); }

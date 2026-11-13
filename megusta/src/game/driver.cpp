@@ -92,8 +92,12 @@ void Driver::frame(DriverServices& s) {
         s.displayWidgets(s.context,-9999,-1); networkServiceEnd();
     }
     const auto guiRectangle=s.viewport.pixelRectangle();
+#ifdef MEGUSTA_SDL
     s.viewport.worldExpanded=s.viewport.surface.enabled() && s.viewport.expandGameView &&
         s.hole.hasActiveScene(s.holeServices.runtime.objects);
+#else
+    s.viewport.worldExpanded=false;
+#endif
     auto sceneRectangle=guiRectangle;
     auto* sceneContext=ssgGetCurrentContext();float originalHorizontal,originalVertical;
     sceneContext->getFOV(&originalHorizontal,&originalVertical);
