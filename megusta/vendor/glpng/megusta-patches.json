@@ -3,7 +3,7 @@
   "upstream_sha256": "61eda10fa1aefe0879cdae77197db6527443ad76ab5f5e1037ef2698a4986623",
   "modified_sha256": "c9ae0b23b8d62f55e36d78f58b06b8a05c27f18fb1cfca172a1563c1eba60b48",
   "modification": "MG-GLPNG-001/002/003",
-  "generator": "tools/prepare_glpng.py",
+  "generator": "tools/codegen/prepare_glpng.py",
   "reader_patch": "patches/glpng/0003-reader-stream.patch",
   "public_header_sha256": "538f561051e5ff6c0ae923202f6fd75e7921ec7fb72b9a56672a4c44c97f52b8",
   "reader_header_sha256": "1bde80f1464d9c0b93e1f40e33bdb48cdd741722969a0133226c51b6b3bbcb83"
