@@ -1,0 +1,137 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "wasm-headless",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/wasm-headless",
+      "toolchainFile": "$env{EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MEGUSTA_BROWSER": "OFF",
+        "MEGUSTA_HEADLESS": "ON",
+        "MEGUSTA_PLATFORM_ONLY": "ON",
+        "MEGUSTA_ASSET_DIR": "$env{MEGUSTA_ASSET_DIR}"
+      }
+    },
+    {
+      "name": "wasm-browser",
+      "inherits": "wasm-headless",
+      "binaryDir": "${sourceDir}/build/wasm-browser",
+      "cacheVariables": {
+        "MEGUSTA_BROWSER": "ON",
+        "MEGUSTA_HEADLESS": "OFF",
+        "MEGUSTA_PLATFORM_ONLY": "OFF",
+        "MEGUSTA_BUILD_SSG": "ON",
+        "MEGUSTA_BUILD_PUI": "ON",
+        "MEGUSTA_BUILD_NET": "ON"
+      }
+    },
+    {
+      "name": "win32",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "Win32",
+      "binaryDir": "${sourceDir}/build/win32"
+    },
+    {
+      "name": "win32-clang",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/win32-clang",
+      "toolchainFile": "${sourceDir}/cmake/mingw-clang.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "environment": {
+        "WINEPREFIX": "/tmp/mgm-wineprefix"
+      }
+    },
+    {
+      "name": "win64-vs",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/win64-vs",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;RelWithDebInfo",
+        "MEGUSTA_ENABLE_ASAN": "OFF",
+        "MEGUSTA_GAME_PRESERVE_LAUNCH_CWD": "ON"
+      }
+    },
+    {
+      "name": "macos-sdl",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/macos-sdl",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "MEGUSTA_NATIVE_SDL": "ON",
+        "MEGUSTA_GAME_PRESERVE_LAUNCH_CWD": "ON"
+      }
+    },
+    {
+      "name": "linux-sdl",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/linux-sdl",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "MEGUSTA_NATIVE_SDL": "ON",
+        "MEGUSTA_GAME_PRESERVE_LAUNCH_CWD": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "wasm-headless",
+      "configurePreset": "wasm-headless",
+      "targets": [
+        "megusta_platform_probe"
+      ]
+    },
+    {
+      "name": "wasm-browser",
+      "configurePreset": "wasm-browser",
+      "targets": [
+        "megusta_game"
+      ]
+    },
+    {
+      "name": "win32",
+      "configurePreset": "win32",
+      "configuration": "Debug"
+    },
+    {
+      "name": "win32-clang",
+      "configurePreset": "win32-clang"
+    },
+    {
+      "name": "win64-vs",
+      "configurePreset": "win64-vs",
+      "configuration": "RelWithDebInfo",
+      "targets": [
+        "megusta_game"
+      ]
+    },
+    {
+      "name": "macos-sdl",
+      "configurePreset": "macos-sdl",
+      "targets": [
+        "megusta_game"
+      ]
+    },
+    {
+      "name": "linux-sdl",
+      "configurePreset": "linux-sdl",
+      "targets": [
+        "megusta_game"
+      ]
+    }
+  ]
+}

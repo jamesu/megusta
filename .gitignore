@@ -1,0 +1,9 @@
+*.obj
+*.o
+*.exe
+.DS_Store
+*.zip
+megusta/build/**
+megusta/trash/**
+MGM/**
+recomp/**

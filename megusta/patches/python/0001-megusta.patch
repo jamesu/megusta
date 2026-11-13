@@ -1,0 +1,844 @@
+--- /dev/null
++++ b/Megusta/CPython.cmake
+@@ -0,0 +1,149 @@
++get_filename_component(MEGUSTA_PYTHON_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
++if(NOT EXISTS "${MEGUSTA_PYTHON_ROOT}/PCbuild/python15.dsp")
++  message(FATAL_ERROR "Vendored CPython 1.5.2 sources are missing")
++endif()
++# Keep the embedded runtime source closure explicit here. Recovery manifests
++# document the inventory but are not required to configure or build the game.
++if(WIN32)
++  set(MEGUSTA_PYTHON_PLATFORM_UNITS PC/dl_nt.c PC/getpathp.c PC/import_nt.c)
++else()
++  # Browser build uses CPython's POSIX path and OS module ports; runtime
++  # extension loading remains disabled by the recovered NO_DYNAMIC_LINK path.
++  set(MEGUSTA_PYTHON_PLATFORM_UNITS Modules/getpath.c)
++endif()
++set(MEGUSTA_PYTHON_UNITS
++  Modules/arraymodule.c
++  Modules/binascii.c
++  Modules/cPickle.c
++  Modules/cStringIO.c
++  Modules/cmathmodule.c
++  Modules/errnomodule.c
++  Modules/mathmodule.c
++  Modules/md5c.c
++  Modules/md5module.c
++  Modules/newmodule.c
++  Modules/operator.c
++  Modules/regexmodule.c
++  Modules/regexpr.c
++  Modules/rotormodule.c
++  Modules/shamodule.c
++  Modules/socketmodule.c
++  Modules/soundex.c
++  Modules/stropmodule.c
++  Modules/structmodule.c
++  Modules/timemodule.c
++  Objects/abstract.c
++  Objects/bufferobject.c
++  Objects/classobject.c
++  Objects/cobject.c
++  Objects/complexobject.c
++  Objects/dictobject.c
++  Objects/fileobject.c
++  Objects/floatobject.c
++  Objects/frameobject.c
++  Objects/funcobject.c
++  Objects/intobject.c
++  Objects/listobject.c
++  Objects/longobject.c
++  Objects/methodobject.c
++  Objects/moduleobject.c
++  Objects/object.c
++  Objects/rangeobject.c
++  Objects/sliceobject.c
++  Objects/stringobject.c
++  Objects/tupleobject.c
++  Objects/typeobject.c
++  Parser/acceler.c
++  Parser/bitset.c
++  Parser/grammar1.c
++  Parser/listnode.c
++  Parser/metagrammar.c
++  Parser/myreadline.c
++  Parser/node.c
++  Parser/parser.c
++  Parser/parsetok.c
++  Parser/tokenizer.c
++  Python/bltinmodule.c
++  Python/ceval.c
++  Python/compile.c
++  Python/errors.c
++  Python/frozen.c
++  Python/getargs.c
++  Python/getcompiler.c
++  Python/getcopyright.c
++  Python/getmtime.c
++  Python/getopt.c
++  Python/getplatform.c
++  Python/getversion.c
++  Python/graminit.c
++  Python/import.c
++  Python/marshal.c
++  Python/modsupport.c
++  Python/mystrtoul.c
++  Python/pyfpe.c
++  Python/pystate.c
++  Python/pythonrun.c
++  Python/structmember.c
++  Python/sysmodule.c
++  Python/traceback.c
++  Python/importdl.c
++  Modules/getbuildinfo.c
++  ${MEGUSTA_PYTHON_PLATFORM_UNITS})
++set(MEGUSTA_PYTHON_SOURCES)
++foreach(unit IN LISTS MEGUSTA_PYTHON_UNITS)
++  set(source "${MEGUSTA_PYTHON_ROOT}/${unit}")
++  if(NOT EXISTS "${source}")
++    message(FATAL_ERROR "Required CPython source unit is missing: ${unit}")
++  endif()
++  list(APPEND MEGUSTA_PYTHON_SOURCES "${source}")
++endforeach()
++list(APPEND MEGUSTA_PYTHON_SOURCES
++  "${MEGUSTA_PYTHON_ROOT}/Megusta/builtin_config.c"
++  "${MEGUSTA_PYTHON_ROOT}/Megusta/interrupt_stubs.c")
++
++add_library(megusta_python STATIC ${MEGUSTA_PYTHON_SOURCES})
++# Saved 0049fa40 is the upstream unsupported-dynamic-module branch, even on
++# Win32. Saved 004b5190 reports this fixed original build identity.
++set_source_files_properties("${MEGUSTA_PYTHON_ROOT}/Python/importdl.c" PROPERTIES
++  COMPILE_DEFINITIONS NO_DYNAMIC_LINK)
++set_source_files_properties("${MEGUSTA_PYTHON_ROOT}/Modules/getbuildinfo.c" PROPERTIES
++  COMPILE_DEFINITIONS "BUILD=0;DATE=\"Aug 14 2001\";TIME=\"16:17:42\"")
++target_include_directories(megusta_python BEFORE PUBLIC
++  "${MEGUSTA_PYTHON_ROOT}/Megusta")
++target_include_directories(megusta_python PUBLIC
++  "${MEGUSTA_PYTHON_ROOT}/Include"
++  "${MEGUSTA_PYTHON_ROOT}/PC"
++  "${MEGUSTA_PYTHON_ROOT}/Python"
++  "${MEGUSTA_PYTHON_ROOT}/Parser"
++  "${MEGUSTA_PYTHON_ROOT}/Objects"
++  "${MEGUSTA_PYTHON_ROOT}/Modules")
++target_compile_definitions(megusta_python PRIVATE
++  NDEBUG USE_DL_EXPORT)
++if(EMSCRIPTEN AND MEGUSTA_BROWSER)
++  target_compile_definitions(megusta_python PRIVATE MEGUSTA_BROWSER_RELOAD_ON_EXIT=1)
++endif()
++set_target_properties(megusta_python PROPERTIES
++  C_STANDARD 90
++  C_STANDARD_REQUIRED OFF
++  C_EXTENSIONS ON)
++if(NOT MSVC AND CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
++  # The original x86 build uses x87. x64 uses the platform's native FP ABI.
++  target_compile_options(megusta_python PRIVATE -O2 -fno-fast-math -ffp-contract=off -fno-strict-aliasing)
++  if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT EMSCRIPTEN)
++    target_compile_options(megusta_python PRIVATE -mfpmath=387 -mno-sse -mno-sse2)
++  endif()
++elseif(MSVC)
++  target_compile_options(megusta_python PRIVATE /O2)
++  set_property(TARGET megusta_python PROPERTY
++    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
++endif()
++if(WIN32)
++  target_link_libraries(megusta_python PUBLIC advapi32 winmm wsock32)
++endif()
++if(MSVC)
++  # PC/config.h carries an automatic python15 DLL import-library directive.
++  # This target is a static embed, so ignore that default-library pragma even
++  # if a stale object or direct upstream config include still emits it.
++  target_link_options(megusta_python INTERFACE
++    "/NODEFAULTLIB:python15.lib" "/NODEFAULTLIB:python15_d.lib")
++endif()
+--- /dev/null
++++ b/Megusta/builtin_config.c
+@@ -0,0 +1,58 @@
++/* Built-in module table reconstructed from the game's recovered CPython inittab. */
++#include "Python.h"
++
++extern void initarray(void);
++extern void initbinascii(void);
++extern void initcmath(void);
++extern void initerrno(void);
++extern void initmath(void);
++extern void initmd5(void);
++extern void initnew(void);
++extern void initoperator(void);
++extern void initregex(void);
++extern void initrotor(void);
++extern void initsha(void);
++#ifdef _WIN32
++extern void init_socket(void);
++#elif !defined(__EMSCRIPTEN__)
++extern void initsocket(void);
++#endif
++extern void initsoundex(void);
++extern void initstrop(void);
++extern void initstruct(void);
++extern void inittime(void);
++extern void initcStringIO(void);
++extern void initcPickle(void);
++extern void PyMarshal_Init(void);
++extern void initimp(void);
++
++struct _inittab _PyImport_Inittab[] = {
++    {"array", initarray},
++    {"binascii", initbinascii},
++    {"cmath", initcmath},
++    {"errno", initerrno},
++    {"math", initmath},
++    {"md5", initmd5},
++    {"new", initnew},
++    {"operator", initoperator},
++    {"regex", initregex},
++    {"rotor", initrotor},
++    {"sha", initsha},
++#ifdef _WIN32
++    {"_socket", init_socket},
++#elif !defined(__EMSCRIPTEN__)
++    {"socket", initsocket},
++#endif
++    {"soundex", initsoundex},
++    {"strop", initstrop},
++    {"struct", initstruct},
++    {"time", inittime},
++    {"cStringIO", initcStringIO},
++    {"cPickle", initcPickle},
++    {"marshal", PyMarshal_Init},
++    {"imp", initimp},
++    {"__main__", NULL},
++    {"__builtin__", NULL},
++    {"sys", NULL},
++    {NULL, NULL}
++};
+--- /dev/null
++++ b/Megusta/config.h
+@@ -0,0 +1,152 @@
++/*
++ * Game-specific CPython 1.5.2 Win32 configuration.
++ *
++ * The preserved stock PC/config.h enables WITH_THREAD only in its MSVC and
++ * Watcom branches. This MinGW-targeted Clang build does not claim _MSC_VER;
++ * explicitly provide the evidenced Win32 platform features and keep the
++ * game's OS thread backend disabled.
++ */
++#ifndef MEGUSTA_PYTHON_CONFIG_H
++#define MEGUSTA_PYTHON_CONFIG_H
++
++#if defined(__EMSCRIPTEN__) || defined(__unix__) || defined(__APPLE__)
++/* wasm32 CPython embed: POSIX libc, 32-bit pointers/long, no OS threads. */
++#define HAVE_LIMITS_H 1
++#define HAVE_HYPOT 1
++#define HAVE_CLOCK 1
++#define HAVE_STRFTIME 1
++#define HAVE_STRERROR 1
++#define HAVE_LONG_LONG 1
++#define LONG_LONG long long
++#define SIZEOF_INT 4
++#if defined(__LP64__)
++#define SIZEOF_LONG 8
++#define SIZEOF_VOID_P 8
++#define WORD_BIT 64
++#else
++#define SIZEOF_LONG 4
++#define SIZEOF_VOID_P 4
++#define WORD_BIT 32
++#endif
++#define SIZEOF_LONG_LONG 8
++#if defined(__EMSCRIPTEN__)
++#define COMPILER "[Emscripten wasm32]"
++#elif defined(__APPLE__)
++#define COMPILER "[native macOS]"
++#else
++#define COMPILER "[native POSIX]"
++#endif
++#define PYTHONPATH "/"
++#define DONT_HAVE_SIG_ALARM 1
++#define DONT_HAVE_SIG_PAUSE 1
++#define HAVE_PROTOTYPES 1
++#define HAVE_STDARG_PROTOTYPES 1
++#define HAVE_STDLIB_H 1
++#define HAVE_STDDEF_H 1
++#define HAVE_FCNTL_H 1
++#define HAVE_UNISTD_H 1
++#define HAVE_GETPID 1
++#define HAVE_PUTENV 1
++#define HAVE_MKTIME 1
++#define HAVE_SETVBUF 1
++#if defined(__EMSCRIPTEN__)
++#define HAVE_FTIME 1
++#endif
++#define HAVE_GETTIMEOFDAY 1
++#define HAVE_SYS_STAT_H 1
++#define HAVE_SYS_TYPES_H 1
++#define HAVE_SYS_TIME_H 1
++#define TIME_WITH_SYS_TIME 1
++#define HAVE_SIGNAL_H 1
++#define HAVE_ERRNO_H 1
++#define Py_PTR_FMT "%lx"
++#define Py_PTR_FMT_ARG(p) ((unsigned long)(p))
++#define Py_PTR_HASH(p) ((long)(p))
++#else
++#ifndef WIN32
++#define WIN32 1
++#endif
++#if !defined(_MSC_VER)
++/* The stock Microsoft config supplies these itself under clang-cl/MSVC. */
++#ifndef MS_WIN32
++#define MS_WIN32 1
++#endif
++#ifndef MS_WINDOWS
++#define MS_WINDOWS 1
++#endif
++#ifndef USE_SOCKET
++#define USE_SOCKET 1
++#endif
++#endif
++
++/* Prevent PC/config.h from declaring static embedded objects dllimport. */
++#define MS_NO_COREDLL 1
++/* PC/config.h also auto-links python15.lib unless this DLL-build guard is set.
++   DL_IMPORT/DL_EXPORT are reset below because this target is a static embed. */
++#ifndef USE_DL_EXPORT
++#define USE_DL_EXPORT 1
++#endif
++#include "../PC/config.h"
++
++/* The stock VC6 config recognizes 32-bit x86 and Alpha, not Windows x64.
++   Keep its LLP64 long size (4) but report native 64-bit pointers so CPython's
++   existing PyLong_FromVoidPtr/PyLong_AsVoidPtr paths are selected. */
++#if defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64)
++#undef SIZEOF_VOID_P
++#define SIZEOF_VOID_P 8
++#endif
++
++/* Preserve the old address formatting on 32-bit builds while avoiding
++   pointer-to-long truncation in x64 diagnostic repr strings. */
++#if SIZEOF_VOID_P > SIZEOF_LONG
++#define Py_PTR_FMT "%p"
++#define Py_PTR_FMT_ARG(p) ((void *)(p))
++#define Py_PTR_HASH(p) \
++	((long)(((unsigned LONG_LONG)(p)) ^ \
++	       (((unsigned LONG_LONG)(p)) >> (8 * SIZEOF_LONG))))
++#else
++#define Py_PTR_FMT "%lx"
++#define Py_PTR_FMT_ARG(p) ((unsigned long)(p))
++#define Py_PTR_HASH(p) ((long)(p))
++#endif
++
++/* The game is a static embed, not the upstream python15 DLL. */
++#undef MS_COREDLL
++#undef USE_DL_IMPORT
++#undef USE_DL_EXPORT
++#undef DL_IMPORT
++#define DL_IMPORT(RTYPE) RTYPE
++#undef DL_EXPORT
++#define DL_EXPORT(RTYPE) RTYPE
++#undef WITH_THREAD
++#undef NT_THREADS
++/* PC/config.h sets this for an old compiler quirk that Clang does not have. */
++#undef BAD_STATIC_FORWARD
++
++#ifndef COMPILER
++#define COMPILER "[ANSI C]"
++#endif
++#ifndef PYTHONPATH
++#define PYTHONPATH ".\\DLLs;.\\lib;.\\lib\\plat-win;.\\lib\\lib-tk"
++#endif
++#ifndef HAVE_CLOCK
++#define HAVE_CLOCK 1
++#endif
++#ifndef HAVE_STRFTIME
++#define HAVE_STRFTIME 1
++#endif
++#ifndef HAVE_STRERROR
++#define HAVE_STRERROR 1
++#endif
++#ifndef HAVE_LONG_LONG
++#define HAVE_LONG_LONG 1
++#endif
++#ifndef LONG_LONG
++#define LONG_LONG long long
++#endif
++#ifndef WORD_BIT
++#define WORD_BIT 32
++#endif
++#endif
++
++#endif /* MEGUSTA_PYTHON_CONFIG_H */
+--- /dev/null
++++ b/Megusta/interrupt_stubs.c
+@@ -0,0 +1,11 @@
++/* Executable-evidenced disabled interrupt hooks, not the stock signal module.
++ * Py_Initialize/Py_Finalize call the saved no-op service stub at the interrupt
++ * initialization/finalization sites. PyObject_Print and errno handling call
++ * the shared return-zero stub at their PyErr_CheckSignals sites.
++ * Evidence and hashes: manifests/python_build_scope.json.
++ */
++#include "Python.h"
++void PyOS_InitInterrupts(void) {}
++void PyOS_FiniInterrupts(void) {}
++int PyErr_CheckSignals(void) { return 0; }
++int PyOS_InterruptOccurred(void) { return 0; }
+--- /dev/null
++++ b/Megusta/largeint.h
+@@ -0,0 +1,36 @@
++/*
++ * Compatibility subset for the legacy Microsoft largeint.h used by
++ * CPython 1.5.2's Win32 timemodule. The Win32 SDK supplies LARGE_INTEGER and
++ * the performance-counter APIs; this file supplies only the three arithmetic
++ * helpers consumed by that source file.
++ */
++#ifndef MEGUSTA_PYTHON_LARGEINT_H
++#define MEGUSTA_PYTHON_LARGEINT_H
++
++#include <windows.h>
++
++#define LargeIntegerEqualToZero(value) ((value).QuadPart == 0)
++#define LargeIntegerSubtract(left, right) \
++	megusta_large_integer_subtract((left), (right))
++#define LargeIntegerDivide(dividend, divisor, remainder) \
++	megusta_large_integer_divide((dividend), (divisor), (remainder))
++
++static __inline LARGE_INTEGER
++megusta_large_integer_subtract(LARGE_INTEGER left, LARGE_INTEGER right)
++{
++	LARGE_INTEGER result;
++	result.QuadPart = left.QuadPart - right.QuadPart;
++	return result;
++}
++
++static __inline LARGE_INTEGER
++megusta_large_integer_divide(LARGE_INTEGER dividend, LARGE_INTEGER divisor,
++			     LARGE_INTEGER *remainder)
++{
++	LARGE_INTEGER quotient;
++	quotient.QuadPart = dividend.QuadPart / divisor.QuadPart;
++	remainder->QuadPart = dividend.QuadPart % divisor.QuadPart;
++	return quotient;
++}
++
++#endif /* MEGUSTA_PYTHON_LARGEINT_H */
+--- /dev/null
++++ b/Megusta/runtime_setup.h
+@@ -0,0 +1,12 @@
++#pragma once
++#include "Python.h"
++namespace megusta {
++// Driver_initialize_impl 00401e40 sets these three words immediately before
++// Py_Initialize: 0053de2c=1, 0054f55c=1, 005056d8=0. This is application
++// startup policy, not a modification of CPython's stock global initializers.
++inline void configureGamePython(bool classExceptions=false) {
++    Py_OptimizeFlag=1;
++    Py_NoSiteFlag=1;
++    Py_UseClassExceptionsFlag=classExceptions?1:0;
++}
++}
+--- a/Modules/arraymodule.c
++++ b/Modules/arraymodule.c
+@@ -722,8 +722,18 @@
+ 	arrayobject *self;
+ 	PyObject *args;
+ {
++#if SIZEOF_VOID_P > SIZEOF_LONG
++	PyObject *address = PyLong_FromVoidPtr((void *)self->ob_item);
++	PyObject *result;
++	if (address == NULL)
++		return NULL;
++	result = Py_BuildValue("Ol", address, (long)self->ob_size);
++	Py_DECREF(address);
++	return result;
++#else
+ 	return Py_BuildValue("ll",
+ 			     (long)(self->ob_item), (long)(self->ob_size));
++#endif
+ }
+ 
+ static char buffer_info_doc [] =
+--- a/Modules/cPickle.c
++++ b/Modules/cPickle.c
+@@ -63,6 +63,14 @@
+ 
+ #include <errno.h>
+ 
++/* cPickle uses object addresses as private memo keys. Keep those keys full-width
++   on LLP64 while retaining the original PyInt keys on 32-bit builds. */
++#if SIZEOF_VOID_P > SIZEOF_LONG
++#define cPickle_ObjectId(p) PyLong_FromVoidPtr((void *)(p))
++#else
++#define cPickle_ObjectId(p) PyInt_FromLong((long)(p))
++#endif
++
+ #define UNLESS(E) if (!(E))
+ 
+ #define DEL_LIST_SLICE(list, from, to) (PyList_SetSlice(list, from, to, NULL))
+@@ -723,7 +731,7 @@
+ 
+     p++;  /* Make sure memo keys are positive! */
+ 
+-    UNLESS (py_ob_id = PyInt_FromLong((long)ob))
++    UNLESS (py_ob_id = cPickle_ObjectId(ob))
+         goto finally;
+ 
+     UNLESS (memo_len = PyInt_FromLong(p))
+@@ -1178,7 +1186,7 @@
+             goto finally;
+     }
+ 
+-    UNLESS (py_tuple_id = PyInt_FromLong((long)args))
++    UNLESS (py_tuple_id = cPickle_ObjectId(args))
+         goto finally;
+ 
+     if (len) {
+@@ -1692,12 +1700,9 @@
+     }
+ 
+     if (args->ob_refcnt > 1) {
+-        long ob_id;
+         int  has_key;
+ 
+-        ob_id = (long)args;
+-
+-        UNLESS (py_ob_id = PyInt_FromLong(ob_id))
++        UNLESS (py_ob_id = cPickle_ObjectId(args))
+             goto finally;
+ 
+         if ((has_key = cPickle_PyMapping_HasKey(self->memo, py_ob_id)) < 0)
+--- a/Modules/timemodule.c
++++ b/Modules/timemodule.c
+@@ -89,6 +89,15 @@
+ 
+ #if defined(PYCC_VACPP)
+ #include <sys/time.h>
++#endif
++
++#if defined(MS_WINDOWS) && defined(_MSC_VER)
++/* Modern UCRT exposes these legacy globals with underscored names.  Keep the
++   aliases local to this module and after system headers: defining them in the
++   global Python config rewrites members in UCRT's struct __timeb. */
++#define timezone _timezone
++#define daylight _daylight
++#define tzname _tzname
+ #endif
+ 
+ #ifdef __BEOS__
+--- a/Objects/bufferobject.c
++++ b/Objects/bufferobject.c
+@@ -236,20 +236,20 @@
+ 
+ 	if ( self->b_base == NULL )
+ 	{
+-		sprintf(buf, "<%s buffer ptr %lx, size %d at %lx>",
++		sprintf(buf, "<%s buffer ptr " Py_PTR_FMT ", size %d at " Py_PTR_FMT ">",
+ 			status,
+-			(long)self->b_ptr,
++			Py_PTR_FMT_ARG(self->b_ptr),
+ 			self->b_size,
+-			(long)self);
++			Py_PTR_FMT_ARG(self));
+ 	}
+ 	else
+ 	{
+-		sprintf(buf, "<%s buffer for %lx, ptr %lx, size %d at %lx>",
++		sprintf(buf, "<%s buffer for " Py_PTR_FMT ", ptr " Py_PTR_FMT ", size %d at " Py_PTR_FMT ">",
+ 			status,
+-			(long)self->b_base,
+-			(long)self->b_ptr,
++			Py_PTR_FMT_ARG(self->b_base),
++			Py_PTR_FMT_ARG(self->b_ptr),
+ 			self->b_size,
+-			(long)self);
++			Py_PTR_FMT_ARG(self));
+ 	}
+ 
+ 	return PyString_FromString(buf);
+--- a/Objects/classobject.c
++++ b/Objects/classobject.c
+@@ -350,11 +350,11 @@
+ 	else
+ 		name = PyString_AsString(op->cl_name);
+ 	if (mod == NULL || !PyString_Check(mod))
+-		sprintf(buf, "<class ?.%.100s at %lx>", name, (long)op);
++		sprintf(buf, "<class ?.%.100s at " Py_PTR_FMT ">", name, Py_PTR_FMT_ARG(op));
+ 	else
+-		sprintf(buf, "<class %.50s.%.50s at %lx>",
++		sprintf(buf, "<class %.50s.%.50s at " Py_PTR_FMT ">",
+ 			PyString_AsString(mod),
+-			name, (long)op);
++			name, Py_PTR_FMT_ARG(op));
+ 	return PyString_FromString(buf);
+ }
+ 
+@@ -745,12 +745,12 @@
+ 			cname = "?";
+ 		PyErr_Clear();
+ 		if (mod == NULL || !PyString_Check(mod))
+-			sprintf(buf, "<?.%.100s instance at %lx>",
+-				cname, (long)inst);
++			sprintf(buf, "<?.%.100s instance at " Py_PTR_FMT ">",
++				cname, Py_PTR_FMT_ARG(inst));
+ 		else
+-			sprintf(buf, "<%.50s.%.50s instance at %lx>",
++			sprintf(buf, "<%.50s.%.50s instance at " Py_PTR_FMT ">",
+ 				PyString_AsString(mod),
+-				cname, (long)inst);
++				cname, Py_PTR_FMT_ARG(inst));
+ 		return PyString_FromString(buf);
+ 	}
+ 	res = PyEval_CallObject(func, (PyObject *)NULL);
+@@ -811,7 +811,7 @@
+ 		func = instance_getattr(inst, cmpstr);
+ 		if (func == NULL) {
+ 			PyErr_Clear();
+-			outcome = (long)inst;
++			outcome = Py_PTR_HASH(inst);
+ 			if (outcome == -1)
+ 				outcome = -2;
+ 			return outcome;
+@@ -1572,8 +1572,8 @@
+ 			icname = PyString_AsString(iclassname);
+ 		else
+ 			icname = "?";
+-		sprintf(buf, "<method %.60s.%.60s of %.60s instance at %lx>",
+-			fcname, fname, icname, (long)self);
++		sprintf(buf, "<method %.60s.%.60s of %.60s instance at " Py_PTR_FMT ">",
++			fcname, fname, icname, Py_PTR_FMT_ARG(self));
+ 	}
+ 	return PyString_FromString(buf);
+ }
+--- a/Objects/fileobject.c
++++ b/Objects/fileobject.c
+@@ -213,11 +213,11 @@
+ 	PyFileObject *f;
+ {
+ 	char buf[300];
+-	sprintf(buf, "<%s file '%.256s', mode '%.10s' at %lx>",
++	sprintf(buf, "<%s file '%.256s', mode '%.10s' at " Py_PTR_FMT ">",
+ 		f->f_fp == NULL ? "closed" : "open",
+ 		PyString_AsString(f->f_name),
+ 		PyString_AsString(f->f_mode),
+-		(long)f);
++		Py_PTR_FMT_ARG(f));
+ 	return PyString_FromString(buf);
+ }
+ 
+@@ -587,7 +587,7 @@
+ */
+ 
+ static PyObject *
+-getline(f, n)
++fileobject_getline(f, n)
+ 	PyFileObject *f;
+ 	int n;
+ {
+@@ -709,7 +709,7 @@
+ 	}
+ 	if (((PyFileObject*)f)->f_fp == NULL)
+ 		return err_closed();
+-	return getline((PyFileObject *)f, n);
++		return fileobject_getline((PyFileObject *)f, n);
+ }
+ 
+ /* Python method */
+@@ -729,7 +729,7 @@
+ 		return PyString_FromString("");
+ 	if (n < 0)
+ 		n = 0;
+-	return getline(f, n);
++		return fileobject_getline(f, n);
+ }
+ 
+ static PyObject *
+@@ -823,7 +823,7 @@
+ 			goto error;
+ 		if (sizehint > 0) {
+ 			/* Need to complete the last line */
+-			PyObject *rest = getline(f, 0);
++			PyObject *rest = fileobject_getline(f, 0);
+ 			if (rest == NULL) {
+ 				Py_DECREF(line);
+ 				goto error;
+--- a/Objects/funcobject.c
++++ b/Objects/funcobject.c
+@@ -200,11 +200,11 @@
+ {
+ 	char buf[140];
+ 	if (op->func_name == Py_None)
+-		sprintf(buf, "<anonymous function at %lx>", (long)op);
++		sprintf(buf, "<anonymous function at " Py_PTR_FMT ">", Py_PTR_FMT_ARG(op));
+ 	else
+-		sprintf(buf, "<function %.100s at %lx>",
++		sprintf(buf, "<function %.100s at " Py_PTR_FMT ">",
+ 			PyString_AsString(op->func_name),
+-			(long)op);
++			Py_PTR_FMT_ARG(op));
+ 	return PyString_FromString(buf);
+ }
+ 
+@@ -234,7 +234,7 @@
+ 	long h;
+ 	h = PyObject_Hash(f->func_code);
+ 	if (h == -1) return h;
+-	h = h ^ (long)f->func_globals;
++	h = h ^ Py_PTR_HASH(f->func_globals);
+ 	if (h == -1) h = -2;
+ 	return h;
+ }
+--- a/Objects/methodobject.c
++++ b/Objects/methodobject.c
+@@ -149,9 +149,9 @@
+ 		sprintf(buf, "<built-in function %.80s>", m->m_ml->ml_name);
+ 	else
+ 		sprintf(buf,
+-			"<built-in method %.80s of %.80s object at %lx>",
++			"<built-in method %.80s of %.80s object at " Py_PTR_FMT ">",
+ 			m->m_ml->ml_name, m->m_self->ob_type->tp_name,
+-			(long)m->m_self);
++			Py_PTR_FMT_ARG(m->m_self));
+ 	return PyString_FromString(buf);
+ }
+ 
+@@ -181,7 +181,12 @@
+ 		if (x == -1)
+ 			return -1;
+ 	}
+-	return x ^ (long) a->m_ml->ml_meth;
++	x ^= Py_PTR_HASH(a->m_ml->ml_meth);
++#if SIZEOF_VOID_P > SIZEOF_LONG
++	if (x == -1)
++		x = -2;
++#endif
++	return x;
+ }
+ 
+ PyTypeObject PyCFunction_Type = {
+--- a/Objects/object.c
++++ b/Objects/object.c
+@@ -173,12 +173,12 @@
+ 	}
+ 	else {
+ 		if (op->ob_refcnt <= 0)
+-			fprintf(fp, "<refcnt %u at %lx>",
+-				op->ob_refcnt, (long)op);
++			fprintf(fp, "<refcnt %u at " Py_PTR_FMT ">",
++				op->ob_refcnt, Py_PTR_FMT_ARG(op));
+ 		else if (op->ob_type->tp_print == NULL) {
+ 			if (op->ob_type->tp_repr == NULL) {
+-				fprintf(fp, "<%s object at %lx>",
+-					op->ob_type->tp_name, (long)op);
++				fprintf(fp, "<%s object at " Py_PTR_FMT ">",
++					op->ob_type->tp_name, Py_PTR_FMT_ARG(op));
+ 			}
+ 			else {
+ 				PyObject *s;
+@@ -229,8 +229,8 @@
+ 		return PyString_FromString("<NULL>");
+ 	else if (v->ob_type->tp_repr == NULL) {
+ 		char buf[120];
+-		sprintf(buf, "<%.80s object at %lx>",
+-			v->ob_type->tp_name, (long)v);
++		sprintf(buf, "<%.80s object at " Py_PTR_FMT ">",
++			v->ob_type->tp_name, Py_PTR_FMT_ARG(v));
+ 		return PyString_FromString(buf);
+ 	}
+ 	else
+@@ -346,10 +346,15 @@
+ 	PyObject *v;
+ {
+ 	PyTypeObject *tp = v->ob_type;
++	long h;
+ 	if (tp->tp_hash != NULL)
+ 		return (*tp->tp_hash)(v);
+-	if (tp->tp_compare == NULL)
+-		return (long) v; /* Use address as hash value */
++	if (tp->tp_compare == NULL) {
++		h = Py_PTR_HASH(v); /* Use the object address as hash input. */
++		if (h == -1)
++			h = -2;
++		return h;
++	}
+ 	/* If there's a cmp but no hash defined, the object can't be hashed */
+ 	PyErr_SetString(PyExc_TypeError, "unhashable type");
+ 	return -1;
+--- a/PC/import_nt.c
++++ b/PC/import_nt.c
+@@ -44,7 +44,7 @@
+ 	struct filedescr *fdp = NULL;
+ 	FILE *fp;
+ 	HKEY keyBase = PyWin_IsWin32s() ? HKEY_CLASSES_ROOT : HKEY_LOCAL_MACHINE;
+-	int modNameSize;
++	LONG modNameSize;
+ 	long regStat;
+ 
+ 	// Calculate the size for the sprintf buffer.
+@@ -54,7 +54,7 @@
+ 	moduleKey = alloca(bufSize); 
+ 	sprintf(moduleKey, "Software\\Python\\PythonCore\\%s\\Modules\\%s%s", PyWin_DLLVersionString, moduleName, debugString);
+ 
+-	modNameSize = pathLen;
++	modNameSize = (LONG)pathLen;
+ 	regStat = RegQueryValue(keyBase, moduleKey, pathBuf, &modNameSize);
+ 	if (regStat!=ERROR_SUCCESS)
+ 		return NULL;
+--- a/Python/bltinmodule.c
++++ b/Python/bltinmodule.c
+@@ -913,7 +913,11 @@
+ 
+ 	if (!PyArg_ParseTuple(args, "O:id", &v))
+ 		return NULL;
++#if SIZEOF_VOID_P > SIZEOF_LONG
++	return PyLong_FromVoidPtr((void *)v);
++#else
+ 	return PyInt_FromLong((long)v);
++#endif
+ }
+ 
+ static char id_doc[] =
+--- a/Python/compile.c
++++ b/Python/compile.c
+@@ -132,8 +132,8 @@
+ 		filename = PyString_AsString(co->co_filename);
+ 	if (co->co_name && PyString_Check(co->co_name))
+ 		name = PyString_AsString(co->co_name);
+-	sprintf(buf, "<code object %.100s at %lx, file \"%.300s\", line %d>",
+-		name, (long)co, filename, lineno);
++	sprintf(buf, "<code object %.100s at " Py_PTR_FMT ", file \"%.300s\", line %d>",
++		name, Py_PTR_FMT_ARG(co), filename, lineno);
+ 	return PyString_FromString(buf);
+ }
+ 
+--- a/Python/sysmodule.c
++++ b/Python/sysmodule.c
+@@ -45,6 +45,14 @@
+ */
+ 
+ #include "Python.h"
++#ifdef MEGUSTA_BROWSER_RELOAD_ON_EXIT
++#include <emscripten.h>
++static void megusta_browser_reload_on_exit(void)
++{
++    emscripten_cancel_main_loop();
++    EM_ASM({ window.location.reload(); });
++}
++#endif
+ 
+ #include "osdefs.h"
+ 
+@@ -126,9 +134,17 @@
+ 	PyObject *self;
+ 	PyObject *args;
+ {
++#ifdef MEGUSTA_BROWSER_RELOAD_ON_EXIT
++    /* Browser adaptation: EXITGAME.PY's confirmed quit starts a fresh page
++       session instead of leaving a terminated interpreter in the canvas. */
++    megusta_browser_reload_on_exit();
++    Py_INCREF(Py_None);
++    return Py_None;
++#else
+ 	/* Raise SystemExit so callers may catch it or clean up. */
+ 	PyErr_SetObject(PyExc_SystemExit, args);
+ 	return NULL;
++#endif
+ }
+ 
+ static char exit_doc[] =
