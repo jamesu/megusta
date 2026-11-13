@@ -5,7 +5,10 @@
 #include <cstdlib>
 #include <cstring>
 namespace megusta { namespace audio { namespace wave {
-// Immutable tables recovered at 004ed390 and 004ed3d0.
+
+// Standard IMA/DVI ADPCM tables, matching IMA Recommended Practices rev. 3.00
+// (21 Oct 1992), Appendix D, section 6.2, page 31:
+// https://www.cs.columbia.edu/~hgs/audio/dvi/IMA_ADPCM.pdf#page=31
 static const int indexAdjust[16]={-1,-1,-1,-1,2,4,6,8,-1,-1,-1,-1,2,4,6,8};
 static const int steps[89]={7,8,9,10,11,12,13,14,16,17,19,21,23,25,28,31,34,37,41,45,50,
     55,60,66,73,80,88,97,107,118,130,143,157,173,190,209,230,253,279,307,337,371,408,
