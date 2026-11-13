@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 // Generated from canonical Ghidra exports.
 #pragma once
 #include <cstdint>

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 // Intentionally reincludable: method-list expressions are model authored.
 #define SWIG_BEGIN(T,N,F,DECL,...) static PyObject* T##_##N(PyObject*,PyObject* args) { \
     char* encoded; DECL; if (!PyArg_ParseTuple(args,const_cast<char*>(F ":" #T "_" #N),&encoded, ##__VA_ARGS__)) return nullptr; \

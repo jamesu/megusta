@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 namespace megusta::platform {
 // Relative SDL motion feeds the original game's recentered absolute cursor.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #include "player.h"
 #include "power_up.h"

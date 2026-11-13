@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #include "resource_mount.h"
 #include "directory_services.h"

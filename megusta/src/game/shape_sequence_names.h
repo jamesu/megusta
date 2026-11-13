@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 namespace megusta {
 // Original pointer table 00502b98, read from the canonical Ghidra database by

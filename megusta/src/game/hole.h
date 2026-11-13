@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #include "gameplay_runtime.h"
 #include "game_config_runtime.h"

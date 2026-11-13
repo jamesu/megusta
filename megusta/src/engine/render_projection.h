@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 namespace megusta {
 class OpenGLAdapter;

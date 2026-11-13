@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #include "runtime.h"
 namespace megusta { class Driver; struct DriverInputServices; struct DriverServices; struct CameraServices; }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #ifdef MEGUSTA_SDL
 #include "game/startup.h"

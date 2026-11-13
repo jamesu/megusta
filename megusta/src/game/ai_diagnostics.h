@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>

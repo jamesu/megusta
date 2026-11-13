@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #include "bitmap_support_wrappers.h"
 #include "graphics_state_wrappers.h"

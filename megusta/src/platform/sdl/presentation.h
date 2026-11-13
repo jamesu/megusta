@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #include "platform/surface_transform.h"
 namespace megusta::platform {

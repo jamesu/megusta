@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 // Generated from the canonical Ghidra literal export.
 #pragma once
 namespace megusta { namespace scene_object_literals {

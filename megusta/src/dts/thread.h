@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #pragma once
 #include "sequence.h"
 #if defined(_MSC_VER) && !defined(__clang__)
