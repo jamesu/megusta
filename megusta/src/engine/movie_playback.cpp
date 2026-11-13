@@ -2,7 +2,7 @@
 #include "movie_adapters.h"
 #include "resource_runtime.h"
 #include "string_services.h"
-#include <GL/gl.h>
+#include "platform_gl.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

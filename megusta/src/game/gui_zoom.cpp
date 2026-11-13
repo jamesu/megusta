@@ -5,7 +5,7 @@
 #include "engine/string_services.h"
 #include "engine/opengl_adapter.h"
 #include "gui_render.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

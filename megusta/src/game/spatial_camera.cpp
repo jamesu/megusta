@@ -4,7 +4,7 @@
 #include "engine/engine_math.h"
 #include "engine/opengl_adapter.h"
 #include "recovered_binding_primitives.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cmath>
 #include <cstdlib>
 #include <utility>

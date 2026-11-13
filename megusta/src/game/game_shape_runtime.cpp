@@ -12,7 +12,7 @@
 #include "engine/resource_runtime.h"
 #include "engine/string_services.h"
 #include "engine/engine_math.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

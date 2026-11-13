@@ -1,10 +1,7 @@
 #include "effect.h"
 #include "engine/multi_texture.h"
 #include "../engine/opengl_adapter.h"
-#ifdef _WIN32
-#include <windows.h>
-#endif
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <GL/glpng.h>
 #include <cmath>
 namespace megusta {

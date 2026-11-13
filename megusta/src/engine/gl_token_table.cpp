@@ -1,5 +1,5 @@
 #include "gl_token_table.h"
-#include <GL/gl.h>
+#include "platform_gl.h"
 namespace megusta {
 Win32GLTokenTable::Win32GLTokenTable() {
     for (auto& value:values) value=unmapped;

@@ -1,5 +1,5 @@
 #include "opengl_adapter.h"
-#include <GL/gl.h>
+#include "platform_gl.h"
 #include <cmath>
 namespace megusta {
 namespace {

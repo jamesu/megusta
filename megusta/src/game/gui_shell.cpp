@@ -13,7 +13,7 @@
 #include "fnt.h"
 #include "pu.h"
 #include "ul.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>

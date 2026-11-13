@@ -1,6 +1,6 @@
 #include "opengl_adapter.h"
 #include "gl_token_table.h"
-#include <GL/gl.h>
+#include "platform_gl.h"
 #include <cstring>
 #if defined(MEGUSTA_SDL) && !defined(__EMSCRIPTEN__)
 #include <SDL.h>

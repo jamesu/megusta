@@ -15,7 +15,7 @@
 #include "gui_assets.h"
 #include "ssgGameAnimation.h"
 #include "fnt.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>

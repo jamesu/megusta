@@ -1,6 +1,6 @@
 #include "opengl_adapter.h"
 #include "gl_token_table.h"
-#include <GL/gl.h>
+#include "platform_gl.h"
 namespace megusta {
 void OpenGLAdapter::enable(int n) { glEnable(tokens[n]); }
 void OpenGLAdapter::disable(int n) { glDisable(tokens[n]); }

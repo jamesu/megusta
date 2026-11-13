@@ -6,7 +6,7 @@
 #include "dts/bitmap_support.h"
 #include "dts/texture_manager.h"
 #include "dts/matrix.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cmath>
 #include <cstring>
 #include <stdexcept>

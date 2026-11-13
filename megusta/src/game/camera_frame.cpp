@@ -12,7 +12,7 @@
 #include "engine/opengl_adapter.h"
 #include "engine/resource_runtime.h"
 #include "engine/string_services.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>

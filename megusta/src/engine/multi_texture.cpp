@@ -4,7 +4,7 @@
 #include "resource_runtime.h"
 #include "reader_stream.h"
 #include "ul.h"
-#include <GL/gl.h>
+#include "platform_gl.h"
 #include <GL/glpng.h>
 #include <cstdio>
 #include <cstdlib>

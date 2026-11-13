@@ -6,7 +6,7 @@
 #include <windowsx.h>
 #include <mmsystem.h>
 #include <dinput.h>
-#include <GL/gl.h>
+#include "../../engine/platform_gl.h"
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>

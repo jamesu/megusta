@@ -5,7 +5,7 @@
 #include "ground_shadow.h"
 #include "engine/opengl_adapter.h"
 #include "ssgGameAnimation.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>

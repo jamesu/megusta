@@ -6,7 +6,7 @@
 #include "engine/opengl_adapter.h"
 #include "engine/runtime_adapters.h"
 #include "fnt.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cstring>
 namespace megusta {
 GuiTooltipState guiTooltipState;

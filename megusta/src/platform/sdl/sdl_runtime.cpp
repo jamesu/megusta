@@ -1,7 +1,7 @@
 #include "sdl_runtime.h"
 #ifdef MEGUSTA_SDL
 #include <SDL.h>
-#include <GL/gl.h>
+#include "../../engine/platform_gl.h"
 namespace megusta::platform {
 namespace {
 constexpr unsigned subsystems=SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_JOYSTICK|SDL_INIT_TIMER;

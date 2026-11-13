@@ -1,5 +1,5 @@
 #include "presentation.h"
-#include <GL/gl.h>
+#include "../../engine/platform_gl.h"
 namespace megusta::platform {
 void beginWorldOverlay(const SurfaceTransform& surface,int width,int height) {
     const auto gui=surface.fit(width,height);

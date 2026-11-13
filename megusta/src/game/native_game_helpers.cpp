@@ -6,7 +6,7 @@
 #include "engine/runtime_adapters.h"
 #include "task_constants.h"
 #include "fnt.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>

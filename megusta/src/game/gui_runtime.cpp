@@ -6,7 +6,7 @@
 #include "gui_render.h"
 #include "room_client.h"
 #include "fnt.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include "engine/opengl_adapter.h"
 #include "engine/string_services.h"
 #include "pu.h"

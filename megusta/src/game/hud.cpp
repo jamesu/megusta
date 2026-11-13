@@ -7,7 +7,7 @@
 #include "effect.h"
 #include "fnt.h"
 #include "ssg.h"
-#include <GL/gl.h>
+#include "../engine/platform_gl.h"
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>

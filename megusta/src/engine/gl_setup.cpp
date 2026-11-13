@@ -1,9 +1,6 @@
 #include "gl_setup.h"
 #include "opengl_adapter.h"
-#ifdef _WIN32
-#include <windows.h>
-#endif
-#include <GL/gl.h>
+#include "platform_gl.h"
 #ifndef APIENTRY
 #define APIENTRY
 #endif
