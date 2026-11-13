@@ -20,18 +20,18 @@ const DIDATAFORMAT* joystickDataFormat() {
     static DIOBJECTDATAFORMAT objects[44]{};
     static const DIDATAFORMAT format=[] {
         unsigned i=0;
-        objects[i++]={&GUID_XAxis,offsetof(DIJOYSTATE,lX),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
-        objects[i++]={&GUID_YAxis,offsetof(DIJOYSTATE,lY),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
-        objects[i++]={&GUID_ZAxis,offsetof(DIJOYSTATE,lZ),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
-        objects[i++]={&GUID_RxAxis,offsetof(DIJOYSTATE,lRx),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
-        objects[i++]={&GUID_RyAxis,offsetof(DIJOYSTATE,lRy),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
-        objects[i++]={&GUID_RzAxis,offsetof(DIJOYSTATE,lRz),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_XAxis,static_cast<DWORD>(offsetof(DIJOYSTATE,lX)),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_YAxis,static_cast<DWORD>(offsetof(DIJOYSTATE,lY)),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_ZAxis,static_cast<DWORD>(offsetof(DIJOYSTATE,lZ)),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_RxAxis,static_cast<DWORD>(offsetof(DIJOYSTATE,lRx)),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_RyAxis,static_cast<DWORD>(offsetof(DIJOYSTATE,lRy)),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
+        objects[i++]={&GUID_RzAxis,static_cast<DWORD>(offsetof(DIJOYSTATE,lRz)),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(0)),0};
         for (unsigned n=0;n<2;++n)
-            objects[i++]={&GUID_Slider,offsetof(DIJOYSTATE,rglSlider)+n*sizeof(LONG),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(n)),0};
+            objects[i++]={&GUID_Slider,static_cast<DWORD>(offsetof(DIJOYSTATE,rglSlider)+n*sizeof(LONG)),static_cast<DWORD>(DIDFT_AXIS|DIDFT_MAKEINSTANCE(n)),0};
         for (unsigned n=0;n<4;++n)
-            objects[i++]={&GUID_POV,offsetof(DIJOYSTATE,rgdwPOV)+n*sizeof(DWORD),static_cast<DWORD>(DIDFT_POV|DIDFT_MAKEINSTANCE(n)),0};
+            objects[i++]={&GUID_POV,static_cast<DWORD>(offsetof(DIJOYSTATE,rgdwPOV)+n*sizeof(DWORD)),static_cast<DWORD>(DIDFT_POV|DIDFT_MAKEINSTANCE(n)),0};
         for (unsigned n=0;n<32;++n)
-            objects[i++]={&GUID_Button,offsetof(DIJOYSTATE,rgbButtons)+n,static_cast<DWORD>(DIDFT_BUTTON|DIDFT_MAKEINSTANCE(n)),0};
+            objects[i++]={&GUID_Button,static_cast<DWORD>(offsetof(DIJOYSTATE,rgbButtons)+n),static_cast<DWORD>(DIDFT_BUTTON|DIDFT_MAKEINSTANCE(n)),0};
         return DIDATAFORMAT{sizeof(DIDATAFORMAT),sizeof(DIOBJECTDATAFORMAT),DIDF_ABSAXIS,
             sizeof(DIJOYSTATE),i,objects};
     }();
