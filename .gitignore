@@ -5,5 +5,6 @@
 *.zip
 megusta/build/**
 megusta/trash/**
+megusta/manifests/**
 MGM/**
 recomp/**

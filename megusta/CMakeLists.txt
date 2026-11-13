@@ -116,6 +116,12 @@ elseif(MSVC)
 endif()
 add_executable(megusta_probe tests/dependencies.c)
 target_link_libraries(megusta_probe PRIVATE megusta_png)
+find_program(MEGUSTA_TEST_PYTHON NAMES python3)
+if(MEGUSTA_TEST_PYTHON)
+  enable_testing()
+  add_test(NAME scene_fixture_hash COMMAND "${MEGUSTA_TEST_PYTHON}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/check_scene_fixture.py" --self-test)
+endif()
 
 # PLIB is compiled from the complete patched distribution in vendor/plib.
 include(cmake/PLIB.cmake)
