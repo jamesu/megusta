@@ -23,7 +23,11 @@ int queryNativeStat(const char* path, ResourceStatus& result) {
 #endif
     result.byteCount = static_cast<std::int32_t>(native.st_size);
     result.modificationTime = static_cast<std::int32_t>(native.st_mtime);
+#if defined(_WIN32)
+    result.kindFlags = (native.st_mode & _S_IFDIR) ? 1 : (native.st_mode & _S_IFREG) ? 2 : 0;
+#else
     result.kindFlags = S_ISDIR(native.st_mode) ? 1 : S_ISREG(native.st_mode) ? 2 : 0;
+#endif
     return 0;
 }
 }
