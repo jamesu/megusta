@@ -8,7 +8,7 @@
 #include "bindings/gui_bindings.h"
 #include "bindings/remaining_game_bindings.h"
 #include "bindings/runtime.h"
-#include "python/runtime_setup.h"
+#include "runtime_setup.h"
 #include "platform/runtime.h"
 #include "engine/resource_runtime.h"
 #include "engine/resource_file.h"

@@ -1,7 +1,7 @@
 """Wine staging guards, exercised without starting Wine or mapping host paths."""
 import sys,tempfile,unittest
 from pathlib import Path
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools/testing'))
 from wine_stage import WineStage
 
 class StagingTests(unittest.TestCase):

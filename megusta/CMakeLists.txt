@@ -50,7 +50,7 @@ option(MEGUSTA_PLATFORM_ONLY "Configure the isolated platform adapter without ga
 
     # gl4es supplies legacy desktop OpenGL on top of WebGL 1 / GLES 2.
     # Keep it confined to the browser game, not the scene-inspection/tests.
-    set(MEGUSTA_GL4ES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/upstream/gl4es" CACHE PATH
+    set(MEGUSTA_GL4ES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/gl4es" CACHE PATH
       "Path to the gl4es source tree")
     if(NOT EXISTS "${MEGUSTA_GL4ES_DIR}/CMakeLists.txt")
       message(FATAL_ERROR
@@ -64,6 +64,9 @@ option(MEGUSTA_PLATFORM_ONLY "Configure the isolated platform adapter without ga
     set(NO_INIT_CONSTRUCTOR ON CACHE BOOL "Initialize gl4es explicitly" FORCE)
     set(DEFAULT_ES 2 CACHE STRING "Use the GLES 2 backend" FORCE)
     add_subdirectory("${MEGUSTA_GL4ES_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/gl4es")
+    # Keep generated archives in this build tree rather than the source root.
+    set_target_properties(GL PROPERTIES
+      ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gl4es/lib")
   endif()
 
 
@@ -80,12 +83,12 @@ if(MEGUSTA_PLATFORM_ONLY)
   endif()
   return()
 endif()
-set(U "${CMAKE_CURRENT_SOURCE_DIR}/upstream")
-if(NOT EXISTS "${U}/zlib-1.1.3/zlib.h" OR NOT EXISTS "${U}/libpng-1.0.8/png.h")
+set(V "${CMAKE_CURRENT_SOURCE_DIR}/vendor")
+if(NOT EXISTS "${V}/zlib-1.1.3/zlib.h" OR NOT EXISTS "${V}/libpng-1.0.8/png.h")
   message(FATAL_ERROR "Required vendored zlib 1.1.3/libpng 1.0.8 source trees are missing")
 endif()
-set(Z "${U}/zlib-1.1.3")
-set(P "${U}/libpng-1.0.8")
+set(Z "${V}/zlib-1.1.3")
+set(P "${V}/libpng-1.0.8")
 set(ZFILES adler32 compress crc32 deflate gzio infblock infcodes inffast inflate inftrees infutil trees uncompr zutil)
 set(PFILES png pngerror pngget pngmem pngpread pngread pngrio pngrtran pngrutil pngset pngtrans pngwio pngwrite pngwtran pngwutil)
 foreach(f IN LISTS ZFILES)
@@ -129,7 +132,7 @@ if(WIN32 OR MEGUSTA_NATIVE_SDL OR (EMSCRIPTEN AND MEGUSTA_BROWSER))
     target_include_directories(megusta_python_resource_import_check PRIVATE src)
     target_link_libraries(megusta_python_resource_import_check PRIVATE megusta_python)
     if(WIN32 AND NOT CMAKE_HOST_WIN32)
-      add_test(NAME python_resource_import COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_dts_ctest.py"
+      add_test(NAME python_resource_import COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tools/testing/run_dts_ctest.py"
         "$<TARGET_FILE:megusta_python_resource_import_check>")
     else()
       add_test(NAME python_resource_import COMMAND megusta_python_resource_import_check)
@@ -220,7 +223,7 @@ if(WIN32)
     add_executable(${check_name} "${check_source}")
     target_link_libraries(${check_name} PRIVATE megusta_dts_check_support)
     if(CMAKE_CROSSCOMPILING)
-      add_test(NAME ${check_name} COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_dts_ctest.py" "$<TARGET_FILE:${check_name}>")
+      add_test(NAME ${check_name} COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tools/testing/run_dts_ctest.py" "$<TARGET_FILE:${check_name}>")
       set_tests_properties(${check_name} PROPERTIES RUN_SERIAL TRUE)
     else()
       add_test(NAME ${check_name} COMMAND ${check_name})
@@ -305,31 +308,6 @@ if(MEGUSTA_BUILD_SSG)
     src/engine/resource_runtime.cpp src/engine/log_capture.cpp src/engine/string_services.cpp
     src/engine/multi_texture.cpp src/engine/runtime_adapters.cpp
     src/engine/directory_services.cpp src/engine/mapped_resource_index.cpp)
-  # The reference oracle mirrors the original 32-bit process layout and has
-  # explicit x86 assembly checks. Do not add unusable oracle targets to x64.
-  if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-    add_library(megusta_original_plib_oracle SHARED tests/original_plib_leaf.cpp)
-    target_link_libraries(megusta_original_plib_oracle PRIVATE plib_ssg)
-    if(MEGUSTA_BUILD_PUI)
-      target_link_libraries(megusta_original_plib_oracle PRIVATE plib_pui)
-      target_compile_definitions(megusta_original_plib_oracle PRIVATE MEGUSTA_ORACLE_PUI)
-    endif()
-    if(MEGUSTA_BUILD_NET)
-      target_link_libraries(megusta_original_plib_oracle PRIVATE plib_net)
-      target_compile_definitions(megusta_original_plib_oracle PRIVATE MEGUSTA_ORACLE_NET)
-    endif()
-    set_target_properties(megusta_original_plib_oracle PROPERTIES PREFIX "")
-    if(NOT MSVC)
-      target_link_options(megusta_original_plib_oracle PRIVATE "-Wl,--add-stdcall-alias")
-    endif()
-    add_executable(megusta_original_plib_check tests/original_host.cpp)
-    target_compile_features(megusta_original_plib_check PRIVATE cxx_std_17)
-    if(MSVC)
-      target_link_options(megusta_original_plib_check PRIVATE /BASE:0x10000000)
-    else()
-      target_link_options(megusta_original_plib_check PRIVATE "-Wl,--image-base,0x10000000")
-    endif()
-  endif()
   add_executable(megusta_scene_inspect src/apps/scene_inspect.cpp)
   target_link_libraries(megusta_scene_inspect PRIVATE megusta_platform)
   if(WIN32)
@@ -427,7 +405,7 @@ if(MEGUSTA_BUILD_SSG)
   target_sources(megusta_scene_inspect PRIVATE src/bindings/remaining_game_bindings.cpp)
   target_sources(megusta_scene_inspect PRIVATE tests/priority_pass_check.cpp)
   if(CMAKE_CROSSCOMPILING)
-    add_test(NAME game_priority_pass COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_dts_ctest.py"
+    add_test(NAME game_priority_pass COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tools/testing/run_dts_ctest.py"
       "$<TARGET_FILE:megusta_scene_inspect>" --check-priority-pass)
   else()
     add_test(NAME game_priority_pass COMMAND megusta_scene_inspect --check-priority-pass)

@@ -2,7 +2,7 @@
 #include "python_resource_import.h"
 #include "../engine/string_services.h"
 #include "Python.h"
-#include "python/runtime_setup.h"
+#include "runtime_setup.h"
 #include "sounds.h"
 #include "room_client.h"
 #include "gui.h"

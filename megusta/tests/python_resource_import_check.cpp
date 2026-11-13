@@ -1,7 +1,7 @@
 #include "engine/resource_runtime.h"
 #include "game/game_config.h"
 #include "game/python_resource_import.h"
-#include "python/runtime_setup.h"
+#include "runtime_setup.h"
 #include "marshal.h"
 #include <filesystem>
 #include <fstream>

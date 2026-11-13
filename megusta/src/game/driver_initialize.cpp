@@ -1,7 +1,7 @@
 #include "driver_initialize.h"
 #include "engine/opengl_adapter.h"
 #include "python_resource_import.h"
-#include "python/runtime_setup.h"
+#include "runtime_setup.h"
 #include "bindings/game_variables.h"
 #include "bindings/sound_bindings.h"
 #include "bindings/config_tasks.h"

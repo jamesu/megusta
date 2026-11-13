@@ -5,7 +5,7 @@
 #include "game/effect.h"
 #include "game/task.h"
 #include "engine/resource_runtime.h"
-#include "python/runtime_setup.h"
+#include "runtime_setup.h"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
